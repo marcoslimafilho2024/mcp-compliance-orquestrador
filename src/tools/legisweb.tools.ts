@@ -9,11 +9,20 @@ export function registerLegiswebTools(server: McpServer, agent: LegiswebAgent): 
       description: 'Busca legislação e materiais no Legisweb (sessão autenticada no servidor).',
       inputSchema: {
         query: z.string().min(1).describe('Termos de busca'),
+        paginas: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .describe(
+            'Quantas páginas de resultados percorrer (1 = só a primeira). Cada página extra clica em "Próxima" na barra de paginação. Máximo 10.',
+          ),
       },
     },
-    async ({ query }) => {
+    async ({ query, paginas }) => {
       try {
-        const resultados = await agent.buscar(query);
+        const resultados = await agent.buscar(query, { paginas });
         return {
           content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }],
         };

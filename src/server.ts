@@ -7,13 +7,14 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 const transports: Record<string, SSEServerTransport> = {};
 
 function bearerAuth(req: Request, res: Response, next: NextFunction): void {
-  const secret = process.env.MCP_SECRET;
+  const secret = process.env.MCP_SECRET?.trim();
   if (!secret) {
     res.status(503).json({ error: 'MCP_SECRET não configurado no servidor' });
     return;
   }
-  const header = req.headers.authorization;
-  if (!header || header !== `Bearer ${secret}`) {
+  const header = req.headers.authorization?.trim();
+  const expected = `Bearer ${secret}`;
+  if (!header || header !== expected) {
     res.status(401).json({ error: 'Token inválido ou ausente' });
     return;
   }

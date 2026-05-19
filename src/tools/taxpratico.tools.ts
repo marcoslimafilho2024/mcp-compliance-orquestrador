@@ -6,14 +6,21 @@ export function registerTaxPraticoTools(server: McpServer, agent: TaxPraticoAgen
   server.registerTool(
     'buscar_taxpratico',
     {
-      description: 'Busca procedimentos e conteúdo no Tax Prático (sessão autenticada no servidor).',
+      description:
+        'Busca procedimentos e conteúdo no Tax Prático (sessão autenticada no servidor). Opcional: filtro apenas CEARÁ.',
       inputSchema: {
         query: z.string().min(1).describe('Termos de busca'),
+        filtro_ceara: z
+          .boolean()
+          .optional()
+          .describe(
+            'Se true, aplica o filtro de UF CEARÁ (dropdown no header) antes de pesquisar.',
+          ),
       },
     },
-    async ({ query }) => {
+    async ({ query, filtro_ceara }) => {
       try {
-        const resultados = await agent.buscar(query);
+        const resultados = await agent.buscar(query, { filtroCeara: filtro_ceara === true });
         return {
           content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }],
         };
