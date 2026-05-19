@@ -1,0 +1,5 @@
+Copie os ficheiros desta pasta para:
+
+G:\Meu Drive\000_PROJETO CLAUDE\
+
+Assim as três máquinas que sincronizam o mesmo Google Drive ficam com o mesmo exemplo de configuração e instruções.

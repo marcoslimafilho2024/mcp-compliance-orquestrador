@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcp-compliance": {
+      "type": "sse",
+      "url": "https://SEU_PROJETO.railway.app/sse",
+      "headers": {
+        "Authorization": "Bearer SEU_MCP_SECRET"
+      }
+    }
+  }
+}
