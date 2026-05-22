@@ -10,38 +10,39 @@ export class LegiswebAgent extends BaseAgent {
   private readonly user = process.env.LEGISWEB_USER ?? '';
   private readonly pass = process.env.LEGISWEB_PASS ?? '';
 
-  /** Fecha o modal de LGPD/cookies caso esteja visível — bloqueia todos os cliques se ignorado. */
+  /**
+   * Remove o modal de LGPD e o backdrop via JS, sem depender de cliques.
+   * data-backdrop="static" bloqueia toda interação — única saída é manipular o DOM.
+   * Não verifica visibilidade antes: o modal pode ainda estar animando quando chamado.
+   */
   private async dismissModalLgpd(page: Page): Promise<void> {
     try {
-      const modal = page.locator('#modalLgpd');
-      const visivel = await modal.isVisible({ timeout: 4000 }).catch(() => false);
-      if (!visivel) return;
+      // Aguarda até 3 s para o modal ou backdrop aparecerem (animação Bootstrap)
+      await page
+        .waitForSelector('#modalLgpd, .modal-backdrop', { state: 'attached', timeout: 3000 })
+        .catch(() => undefined);
 
-      // Bootstrap com data-backdrop="static" ignora cliques no backdrop e ESC.
-      // Forçar fechamento via JS: remove backdrop, oculta modal e libera o body.
       await page.evaluate(() => {
+        // API Bootstrap via jQuery (mais limpa — remove listeners internos)
+        const jq = (window as unknown as { jQuery?: (s: string) => { modal(a: string): void } })
+          .jQuery;
+        if (jq) jq('#modalLgpd').modal('hide');
+
+        // Remoção direta — funciona mesmo sem jQuery e elimina o backdrop residual
         const modal = document.getElementById('modalLgpd');
-        if (!modal) return;
-        // Tenta API Bootstrap 3 / 4 via jQuery
-        const jq = (window as unknown as Record<string, unknown>)['jQuery'] as
-          | ((sel: string) => { modal: (action: string) => void })
-          | undefined;
-        if (jq) {
-          jq('#modalLgpd').modal('hide');
+        if (modal) {
+          modal.classList.remove('in', 'show');
+          (modal as HTMLElement).style.display = 'none';
+          modal.setAttribute('aria-hidden', 'true');
+          modal.removeAttribute('aria-modal');
         }
-        // Remoção direta como fallback (garante mesmo sem jQuery disponível)
-        modal.classList.remove('in', 'show');
-        (modal as HTMLElement).style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
         document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
         document.body.classList.remove('modal-open');
         (document.body as HTMLElement).style.overflow = '';
         (document.body as HTMLElement).style.paddingRight = '';
       });
-
-      await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
     } catch {
-      // Modal não encontrado ou já fechado — segue em frente
+      // Nenhum modal — segue em frente
     }
   }
 
@@ -88,17 +89,13 @@ export class LegiswebAgent extends BaseAgent {
     await this.ensureSession();
     const page = await this.session!.newPage();
     try {
-      await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
+      // Navega direto ao Banco de Dados — evita clicar em links com modal na frente
+      await page.goto('https://www.legisweb.com.br/produtos/bancodedados/', {
+        waitUntil: 'domcontentloaded',
+      });
 
-      // Fecha modal de LGPD antes de tentar clicar em qualquer link
+      // Remove modal LGPD antes de qualquer interação
       await this.dismissModalLgpd(page);
-
-      const bancoDados = page.getByRole('link', { name: /^Banco de Dados$/i }).first();
-      if (await bancoDados.isVisible().catch(() => false)) {
-        await bancoDados.click();
-        await page.waitForLoadState('domcontentloaded');
-        await this.dismissModalLgpd(page);
-      }
 
       const campoBusca = page.locator('#termo');
       await campoBusca.waitFor({ state: 'visible', timeout: 20000 });
