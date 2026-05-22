@@ -17,20 +17,29 @@ export class LegiswebAgent extends BaseAgent {
       const visivel = await modal.isVisible({ timeout: 4000 }).catch(() => false);
       if (!visivel) return;
 
-      // Tenta botão de aceite (textos mais comuns do Legisweb)
-      const btn = modal
-        .locator('button')
-        .filter({ hasText: /concordo|aceito|ok|fechar|continuar|entendi/i })
-        .first();
+      // Bootstrap com data-backdrop="static" ignora cliques no backdrop e ESC.
+      // Forçar fechamento via JS: remove backdrop, oculta modal e libera o body.
+      await page.evaluate(() => {
+        const modal = document.getElementById('modalLgpd');
+        if (!modal) return;
+        // Tenta API Bootstrap 3 / 4 via jQuery
+        const jq = (window as unknown as Record<string, unknown>)['jQuery'] as
+          | ((sel: string) => { modal: (action: string) => void })
+          | undefined;
+        if (jq) {
+          jq('#modalLgpd').modal('hide');
+        }
+        // Remoção direta como fallback (garante mesmo sem jQuery disponível)
+        modal.classList.remove('in', 'show');
+        (modal as HTMLElement).style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
+        document.body.classList.remove('modal-open');
+        (document.body as HTMLElement).style.overflow = '';
+        (document.body as HTMLElement).style.paddingRight = '';
+      });
 
-      if ((await btn.count()) > 0) {
-        await btn.click({ timeout: 5000 });
-      } else {
-        // Fallback: primeiro botão do modal
-        await modal.locator('button').first().click({ timeout: 5000 });
-      }
-
-      await modal.waitFor({ state: 'hidden', timeout: 6000 });
+      await modal.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => undefined);
     } catch {
       // Modal não encontrado ou já fechado — segue em frente
     }
