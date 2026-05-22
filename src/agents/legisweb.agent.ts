@@ -3,16 +3,38 @@ import { BaseAgent } from './base.agent.js';
 
 export type LegiswebResultado = { titulo: string; url: string };
 
-/** XPath do campo de login (topo / menu). */
-const XPATH_LOGIN_USUARIO =
-  '//*[@id="menu"]/div/div[2]/div/div[2]/form/div/div[1]/input';
-
 /** Paginação (ex.: …/nav/ul/li[1]/a — o `nav` ancorado aqui). */
 const XPATH_PAG_NAV = '/html/body/div[5]/div[8]/div/div/nav';
 
 export class LegiswebAgent extends BaseAgent {
   private readonly user = process.env.LEGISWEB_USER ?? '';
   private readonly pass = process.env.LEGISWEB_PASS ?? '';
+
+  /** Fecha o modal de LGPD/cookies caso esteja visível — bloqueia todos os cliques se ignorado. */
+  private async dismissModalLgpd(page: Page): Promise<void> {
+    try {
+      const modal = page.locator('#modalLgpd');
+      const visivel = await modal.isVisible({ timeout: 4000 }).catch(() => false);
+      if (!visivel) return;
+
+      // Tenta botão de aceite (textos mais comuns do Legisweb)
+      const btn = modal
+        .locator('button')
+        .filter({ hasText: /concordo|aceito|ok|fechar|continuar|entendi/i })
+        .first();
+
+      if ((await btn.count()) > 0) {
+        await btn.click({ timeout: 5000 });
+      } else {
+        // Fallback: primeiro botão do modal
+        await modal.locator('button').first().click({ timeout: 5000 });
+      }
+
+      await modal.waitFor({ state: 'hidden', timeout: 6000 });
+    } catch {
+      // Modal não encontrado ou já fechado — segue em frente
+    }
+  }
 
   async login(): Promise<void> {
     if (!this.user || !this.pass) {
@@ -23,20 +45,23 @@ export class LegiswebAgent extends BaseAgent {
       const context = await this.newContextIfNeeded();
       const page = await context.newPage();
       try {
+        // Página de login dedicada — formulário principal sempre visível
         await page.goto('https://www.legisweb.com.br/assinante/login/', {
           waitUntil: 'domcontentloaded',
         });
 
-        const userInput = page.locator(`xpath=${XPATH_LOGIN_USUARIO}`);
-        const passInput = page.locator('#senha_topo_mobile');
+        // Fecha modal de LGPD antes de qualquer interação
+        await this.dismissModalLgpd(page);
 
-        await userInput.waitFor({ state: 'visible', timeout: 20000 });
-        await passInput.waitFor({ state: 'visible', timeout: 20000 });
+        // Formulário da página de login (não o dropdown do menu do topo)
+        const userInput = page.locator('form input[name="login"], form input[type="text"]').first();
+        const passInput = page.locator('form input[name="senha"], form input[type="password"]').first();
+
+        await userInput.waitFor({ state: 'visible', timeout: 15000 });
+        await passInput.waitFor({ state: 'visible', timeout: 15000 });
 
         await userInput.fill(this.user);
         await passInput.fill(this.pass);
-
-        // Botão "entrar" não foi mapeado: Enter no campo senha costuma submeter o form do topo.
         await passInput.press('Enter');
 
         await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {
@@ -56,10 +81,14 @@ export class LegiswebAgent extends BaseAgent {
     try {
       await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
 
+      // Fecha modal de LGPD antes de tentar clicar em qualquer link
+      await this.dismissModalLgpd(page);
+
       const bancoDados = page.getByRole('link', { name: /^Banco de Dados$/i }).first();
       if (await bancoDados.isVisible().catch(() => false)) {
         await bancoDados.click();
         await page.waitForLoadState('domcontentloaded');
+        await this.dismissModalLgpd(page);
       }
 
       const campoBusca = page.locator('#termo');
