@@ -55,28 +55,35 @@ export class LegiswebAgent extends BaseAgent {
       const context = await this.newContextIfNeeded();
       const page = await context.newPage();
       try {
-        // Página de login dedicada — formulário principal sempre visível
-        await page.goto('https://www.legisweb.com.br/assinante/login/', {
-          waitUntil: 'domcontentloaded',
-        });
+        await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
 
-        // Fecha modal de LGPD antes de qualquer interação
+        // Remove modal LGPD antes de qualquer clique
         await this.dismissModalLgpd(page);
 
-        // Formulário da página de login (não o dropdown do menu do topo)
-        const userInput = page.locator('form input[name="login"], form input[type="text"]').first();
-        const passInput = page.locator('form input[name="senha"], form input[type="password"]').first();
+        // O formulário de login fica dentro de um dropdown colapsado no menu do topo.
+        // Clicar em "Acessar" abre o painel e torna os campos visíveis.
+        const acessarBtn = page
+          .getByRole('link', { name: /^Acessar$/i })
+          .or(page.locator('a[href*="login"], button').filter({ hasText: /acessar/i }))
+          .first();
 
-        await userInput.waitFor({ state: 'visible', timeout: 15000 });
-        await passInput.waitFor({ state: 'visible', timeout: 15000 });
+        await acessarBtn.waitFor({ state: 'visible', timeout: 10000 });
+        await acessarBtn.click();
+
+        // Aguarda os campos do dropdown ficarem visíveis
+        const userInput = page.locator('input[name="login"]').first();
+        const passInput = page.locator('input[name="senha"], input[type="password"]').first();
+
+        await userInput.waitFor({ state: 'visible', timeout: 10000 });
+        await passInput.waitFor({ state: 'visible', timeout: 10000 });
 
         await userInput.fill(this.user);
         await passInput.fill(this.pass);
         await passInput.press('Enter');
 
-        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {
-          return page.waitForLoadState('domcontentloaded', { timeout: 15000 });
-        });
+        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() =>
+          page.waitForLoadState('domcontentloaded', { timeout: 15000 }),
+        );
       } finally {
         await page.close();
       }
