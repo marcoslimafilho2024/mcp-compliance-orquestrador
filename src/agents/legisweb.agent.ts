@@ -57,29 +57,47 @@ export class LegiswebAgent extends BaseAgent {
       try {
         await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
 
-        // Remove modal LGPD antes de qualquer clique
+        // Remove modal LGPD antes de qualquer interação
         await this.dismissModalLgpd(page);
 
-        // O formulário de login fica dentro de um dropdown colapsado no menu do topo.
-        // Clicar em "Acessar" abre o painel e torna os campos visíveis.
-        const acessarBtn = page
-          .getByRole('link', { name: /^Acessar$/i })
-          .or(page.locator('a[href*="login"], button').filter({ hasText: /acessar/i }))
-          .first();
+        // Preenche via JS — ignora visibilidade/display do dropdown colapsado
+        const enviado = await page.evaluate(
+          ([u, p]: [string, string]) => {
+            const loginEl = document.querySelector<HTMLInputElement>('input[name="login"]');
+            const senhaEl = document.querySelector<HTMLInputElement>(
+              'input[name="senha"], input[type="password"]',
+            );
+            if (!loginEl || !senhaEl) return false;
 
-        await acessarBtn.waitFor({ state: 'visible', timeout: 10000 });
-        await acessarBtn.click();
+            // Seta valores e dispara eventos para frameworks que escutam onChange
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+              HTMLInputElement.prototype,
+              'value',
+            )?.set;
+            if (nativeInputValueSetter) {
+              nativeInputValueSetter.call(loginEl, u);
+              nativeInputValueSetter.call(senhaEl, p);
+            } else {
+              loginEl.value = u;
+              senhaEl.value = p;
+            }
+            loginEl.dispatchEvent(new Event('input', { bubbles: true }));
+            loginEl.dispatchEvent(new Event('change', { bubbles: true }));
+            senhaEl.dispatchEvent(new Event('input', { bubbles: true }));
+            senhaEl.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // Aguarda os campos do dropdown ficarem visíveis
-        const userInput = page.locator('input[name="login"]').first();
-        const passInput = page.locator('input[name="senha"], input[type="password"]').first();
+            // Submete o form que contém os campos
+            const form = senhaEl.closest('form');
+            if (form) {
+              form.submit();
+              return true;
+            }
+            return false;
+          },
+          [this.user, this.pass] as [string, string],
+        );
 
-        await userInput.waitFor({ state: 'visible', timeout: 10000 });
-        await passInput.waitFor({ state: 'visible', timeout: 10000 });
-
-        await userInput.fill(this.user);
-        await passInput.fill(this.pass);
-        await passInput.press('Enter');
+        if (!enviado) throw new Error('Campos de login não encontrados no DOM');
 
         await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() =>
           page.waitForLoadState('domcontentloaded', { timeout: 15000 }),
