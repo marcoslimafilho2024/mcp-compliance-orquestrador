@@ -89,12 +89,23 @@ export class LegiswebAgent extends BaseAgent {
     await this.ensureSession();
     const page = await this.session!.newPage();
     try {
-      // Navega direto ao Banco de Dados — evita clicar em links com modal na frente
-      await page.goto('https://www.legisweb.com.br/produtos/bancodedados/', {
-        waitUntil: 'domcontentloaded',
-      });
+      // Carrega homepage para descobrir o href real do "Banco de Dados"
+      // (varia: /assinante/bancodedados/ quando logado, /produtos/bancodedados/ quando não)
+      await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
+      await this.dismissModalLgpd(page);
 
-      // Remove modal LGPD antes de qualquer interação
+      const bancoDadosHref = await page
+        .getByRole('link', { name: /^Banco de Dados$/i })
+        .first()
+        .getAttribute('href')
+        .catch(() => null);
+
+      const urlBanco = bancoDadosHref
+        ? new URL(bancoDadosHref, 'https://www.legisweb.com.br').href
+        : 'https://www.legisweb.com.br/assinante/bancodedados/';
+
+      // Navega via goto — sem clicar, sem risco de backdrop interceptar
+      await page.goto(urlBanco, { waitUntil: 'domcontentloaded' });
       await this.dismissModalLgpd(page);
 
       const campoBusca = page.locator('#termo');
