@@ -18,6 +18,14 @@ const TEMPLATES_CATALOG = {
     quando_usar: 'Clientes atendidos diretamente pela Compliance-CE (Fortaleza/CE)',
     ja_formatado: true,
   },
+  parecer_guerra: {
+    arquivo: 'PARECER CONTÁBIL E TRIBUTÁRIO - MODELO.docx',
+    caminho: '00_Genesis/_layouts/PARECER CONTÁBIL E TRIBUTÁRIO - MODELO.docx',
+    tipo: 'docx',
+    proposito: 'Parecer com identidade visual da Guerra Advogados',
+    quando_usar: 'Pareceres emitidos sob a marca Guerra Advogados (consultoria Fortes Tecnologia, Thompson Reuters, Contabilizei e similares)',
+    ja_formatado: true,
+  },
   book_demonstracoes: {
     arquivo: 'EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',
     caminho: '00_Genesis/_layouts/EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',
@@ -54,6 +62,7 @@ const ESTRUTURA_PARECER = {
     'Sempre citar o dispositivo legal completo (artigo, parágrafo, inciso, alínea)',
     'Revisar pareceres trimestralmente — legislação tributária muda com frequência',
     'Usar versão -COMPLIANCE para clientes da Compliance-CE',
+    "Usar versão 'guerra' para pareceres emitidos sob a marca Guerra Advogados",
   ],
 };
 
@@ -152,17 +161,21 @@ export function registerLayoutTools(server: McpServer): void {
   server.registerTool(
     'layout_estrutura_parecer',
     {
-      description: "Estrutura completa do parecer técnico (10 seções). versao: 'padrao' ou 'compliance'",
+      description: "Estrutura completa do parecer técnico (10 seções). versao: 'padrao', 'compliance' ou 'guerra'",
       inputSchema: {
         versao: z
-          .enum(['padrao', 'compliance'])
+          .enum(['padrao', 'compliance', 'guerra'])
           .optional()
           .default('padrao')
-          .describe("Versão do template: 'padrao' (sem identidade visual) ou 'compliance' (com identidade Compliance-CE)"),
+          .describe("Versão do template: 'padrao' (sem identidade visual) | 'compliance' (Compliance-CE) | 'guerra' (Guerra Advogados)"),
       },
     },
     async ({ versao }) => {
-      const chave = versao === 'compliance' ? 'parecer_compliance' : 'parecer_padrao';
+      const mapa: Record<string, keyof typeof TEMPLATES_CATALOG> = {
+        compliance: 'parecer_compliance',
+        guerra: 'parecer_guerra',
+      };
+      const chave = mapa[versao ?? 'padrao'] ?? 'parecer_padrao';
       return {
         content: [
           {
