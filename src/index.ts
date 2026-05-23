@@ -3,16 +3,19 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { LegiswebAgent } from './agents/legisweb.agent.js';
 import { TaxPraticoAgent } from './agents/taxpratico.agent.js';
 import { SijutAgent } from './agents/sijut.agent.js';
+import { CarfAgent } from './agents/carf.agent.js';
 import { registerLegiswebTools } from './tools/legisweb.tools.js';
 import { registerTaxPraticoTools } from './tools/taxpratico.tools.js';
 import { registerLayoutTools } from './tools/layouts.tools.js';
 import { registerSijutTools } from './tools/sijut.tools.js';
 import { registerDriveTools } from './tools/drive.tools.js';
+import { registerCarfTools } from './tools/carf.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
 const taxPraticoAgent = new TaxPraticoAgent();
 const sijutAgent = new SijutAgent();
+const carfAgent = new CarfAgent();
 
 function createMcpServer(): McpServer {
   const server = new McpServer(
@@ -31,6 +34,7 @@ function createMcpServer(): McpServer {
   registerLayoutTools(server);
   registerSijutTools(server, sijutAgent);
   registerDriveTools(server);
+  registerCarfTools(server, carfAgent);
 
   return server;
 }
