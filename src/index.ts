@@ -4,6 +4,7 @@ import { LegiswebAgent } from './agents/legisweb.agent.js';
 import { TaxPraticoAgent } from './agents/taxpratico.agent.js';
 import { registerLegiswebTools } from './tools/legisweb.tools.js';
 import { registerTaxPraticoTools } from './tools/taxpratico.tools.js';
+import { registerLayoutTools } from './tools/layouts.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -23,6 +24,7 @@ function createMcpServer(): McpServer {
 
   registerLegiswebTools(server, legiswebAgent);
   registerTaxPraticoTools(server, taxPraticoAgent);
+  registerLayoutTools(server);
 
   return server;
 }
