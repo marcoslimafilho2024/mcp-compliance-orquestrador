@@ -1,10 +1,21 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { google } from 'googleapis';
 import { z } from 'zod';
 
-function getToken(): string {
-  const token = process.env.GOOGLE_ACCESS_TOKEN;
-  if (!token) throw new Error('Variável GOOGLE_ACCESS_TOKEN não configurada no Railway.');
-  return token;
+function getDriveClient() {
+  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!keyJson) {
+    throw new Error(
+      'GOOGLE_SERVICE_ACCOUNT_JSON não configurado no Railway. ' +
+      'Crie um service account no Google Cloud Console, baixe o JSON da chave e cole como valor desta variável de ambiente.',
+    );
+  }
+  const credentials = JSON.parse(keyJson);
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  return google.drive({ version: 'v3', auth });
 }
 
 export function registerDriveTools(server: McpServer): void {
@@ -13,65 +24,43 @@ export function registerDriveTools(server: McpServer): void {
     {
       description:
         'Move um arquivo do Google Drive para a lixeira (padrão) ou deleta permanentemente. ' +
-        'Requer GOOGLE_ACCESS_TOKEN configurado no Railway. ' +
-        'Use permanente=false (padrão) para poder recuperar depois.',
+        'Usa service account — requer GOOGLE_SERVICE_ACCOUNT_JSON no Railway. ' +
+        'O arquivo deve estar compartilhado com o e-mail do service account.',
       inputSchema: {
-        file_id: z.string().describe('ID do arquivo no Google Drive (ex: 1YLJwYC5xXXmsB1LDKXVvSLbicLBNTqbd)'),
+        file_id: z.string().describe('ID do arquivo no Google Drive'),
         permanente: z
           .boolean()
           .optional()
           .default(false)
-          .describe('false = move para lixeira (recuperável) | true = deleta permanentemente'),
+          .describe('false = lixeira (recuperável) | true = deleção permanente'),
       },
     },
     async ({ file_id, permanente }) => {
-      const token = getToken();
-      const base = `https://www.googleapis.com/drive/v3/files/${file_id}`;
-
-      let response: Response;
+      const drive = getDriveClient();
 
       if (permanente) {
-        response = await fetch(base, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        response = await fetch(base, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ trashed: true }),
-        });
-      }
-
-      if (response.status === 204 || response.ok) {
+        await drive.files.delete({ fileId: file_id });
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify({
-                sucesso: true,
-                file_id,
-                acao: permanente ? 'deletado permanentemente' : 'movido para lixeira',
-              }),
+              text: JSON.stringify({ sucesso: true, file_id, acao: 'deletado permanentemente' }),
             },
           ],
         };
       }
 
-      const erro = await response.text();
+      const { data } = await drive.files.update({
+        fileId: file_id,
+        requestBody: { trashed: true },
+        fields: 'id,name,trashed',
+      });
+
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              sucesso: false,
-              file_id,
-              status: response.status,
-              erro,
-            }),
+            text: JSON.stringify({ sucesso: true, file_id, nome: data.name, acao: 'movido para lixeira' }),
           },
         ],
       };
