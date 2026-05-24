@@ -56,52 +56,33 @@ export class LegiswebAgent extends BaseAgent {
       const page = await context.newPage();
       try {
         await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
-
-        // Remove modal LGPD antes de qualquer interação
         await this.dismissModalLgpd(page);
 
-        // Preenche via JS — ignora visibilidade/display do dropdown colapsado
-        const enviado = await page.evaluate(
-          ([u, p]: [string, string]) => {
-            const loginEl = document.querySelector<HTMLInputElement>('input[name="login"]');
-            const senhaEl = document.querySelector<HTMLInputElement>(
-              'input[name="senha"], input[type="password"]',
-            );
-            if (!loginEl || !senhaEl) return false;
+        // Usa fill() nativo do Playwright com force:true (ignora visibilidade do dropdown colapsado)
+        // e pressiona Enter para disparar os handlers JS/AJAX do site — form.submit() os bypassa.
+        // Prefere os campos do topo (primeiro input[name="login"]) que são sempre renderizados.
+        const campoLogin = page.locator('input[name="login"]').first();
+        const campoSenha = page.locator('input[name="senha"]').first();
 
-            // Seta valores e dispara eventos para frameworks que escutam onChange
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-              HTMLInputElement.prototype,
-              'value',
-            )?.set;
-            if (nativeInputValueSetter) {
-              nativeInputValueSetter.call(loginEl, u);
-              nativeInputValueSetter.call(senhaEl, p);
-            } else {
-              loginEl.value = u;
-              senhaEl.value = p;
-            }
-            loginEl.dispatchEvent(new Event('input', { bubbles: true }));
-            loginEl.dispatchEvent(new Event('change', { bubbles: true }));
-            senhaEl.dispatchEvent(new Event('input', { bubbles: true }));
-            senhaEl.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Submete o form que contém os campos
-            const form = senhaEl.closest('form');
-            if (form) {
-              form.submit();
-              return true;
-            }
-            return false;
-          },
-          [this.user, this.pass] as [string, string],
-        );
-
-        if (!enviado) throw new Error('Campos de login não encontrados no DOM');
+        await campoLogin.fill(this.user, { force: true });
+        await campoSenha.fill(this.pass, { force: true });
+        await campoSenha.press('Enter');
 
         await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() =>
           page.waitForLoadState('domcontentloaded', { timeout: 15000 }),
         );
+
+        // Verifica autenticação: usuário logado tem acesso a links /assinante/
+        const autenticado = await page
+          .locator('a[href*="/assinante/"]')
+          .first()
+          .isVisible()
+          .catch(() => false);
+
+        if (!autenticado) {
+          const urlApos = page.url();
+          throw new Error(`Login não confirmado — URL após submit: ${urlApos}`);
+        }
       } finally {
         await page.close();
       }
@@ -128,9 +109,11 @@ export class LegiswebAgent extends BaseAgent {
           .getAttribute('href')
           .catch(() => null);
 
-        const urlBanco = bancoDadosHref
+        // Usuário autenticado deve acessar /assinante/bancodedados/, não /produtos/ (versão pública)
+        const urlBancoRaw = bancoDadosHref
           ? new URL(bancoDadosHref, 'https://www.legisweb.com.br').href
           : 'https://www.legisweb.com.br/assinante/bancodedados/';
+        const urlBanco = urlBancoRaw.replace('/produtos/bancodedados/', '/assinante/bancodedados/');
 
         // Navega via goto — sem clicar, sem risco de backdrop interceptar
         await page.goto(urlBanco, { waitUntil: 'domcontentloaded' });
