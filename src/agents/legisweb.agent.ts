@@ -111,56 +111,73 @@ export class LegiswebAgent extends BaseAgent {
   async buscar(query: string, opcoes?: { paginas?: number }): Promise<LegiswebResultado[]> {
     const paginas = Math.min(Math.max(opcoes?.paginas ?? 1, 1), 10);
 
-    await this.ensureSession();
-    const page = await this.session!.newPage();
-    try {
-      // Carrega homepage para descobrir o href real do "Banco de Dados"
-      // (varia: /assinante/bancodedados/ quando logado, /produtos/bancodedados/ quando não)
-      await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
-      await this.dismissModalLgpd(page);
+    // retry(2): 1ª tentativa com sessão existente; se #termo não aparecer (sessão expirada),
+    // closeSession() invalida o estado e a 2ª tentativa refaz o login automaticamente.
+    return this.retry(async () => {
+      await this.ensureSession();
+      const page = await this.session!.newPage();
+      try {
+        // Carrega homepage para descobrir o href real do "Banco de Dados"
+        // (varia: /assinante/bancodedados/ quando logado, /produtos/bancodedados/ quando não)
+        await page.goto('https://www.legisweb.com.br/', { waitUntil: 'domcontentloaded' });
+        await this.dismissModalLgpd(page);
 
-      const bancoDadosHref = await page
-        .getByRole('link', { name: /^Banco de Dados$/i })
-        .first()
-        .getAttribute('href')
-        .catch(() => null);
+        const bancoDadosHref = await page
+          .getByRole('link', { name: /^Banco de Dados$/i })
+          .first()
+          .getAttribute('href')
+          .catch(() => null);
 
-      const urlBanco = bancoDadosHref
-        ? new URL(bancoDadosHref, 'https://www.legisweb.com.br').href
-        : 'https://www.legisweb.com.br/assinante/bancodedados/';
+        const urlBanco = bancoDadosHref
+          ? new URL(bancoDadosHref, 'https://www.legisweb.com.br').href
+          : 'https://www.legisweb.com.br/assinante/bancodedados/';
 
-      // Navega via goto — sem clicar, sem risco de backdrop interceptar
-      await page.goto(urlBanco, { waitUntil: 'domcontentloaded' });
-      await this.dismissModalLgpd(page);
+        // Navega via goto — sem clicar, sem risco de backdrop interceptar
+        await page.goto(urlBanco, { waitUntil: 'domcontentloaded' });
+        await this.dismissModalLgpd(page);
 
-      const campoBusca = page.locator('#termo');
-      await campoBusca.waitFor({ state: 'visible', timeout: 20000 });
-      await campoBusca.fill(query);
-      await campoBusca.press('Enter');
+        const campoBusca = page.locator('#termo');
 
-      await page.getByText(/Sua pesquisa retornou/i).waitFor({ state: 'visible', timeout: 45000 });
-      await page.waitForLoadState('domcontentloaded');
+        // Timeout curto para detectar rapidamente sessão expirada (redirecionamento para login)
+        const visivel = await campoBusca
+          .waitFor({ state: 'visible', timeout: 10000 })
+          .then(() => true)
+          .catch(() => false);
 
-      const todas: LegiswebResultado[] = [];
-      const seen = new Set<string>();
-
-      for (let p = 0; p < paginas; p++) {
-        const chunk = await this.coletarLinksResultadoLegisweb(page);
-        for (const r of chunk) {
-          if (seen.has(r.url)) continue;
-          seen.add(r.url);
-          todas.push(r);
+        if (!visivel) {
+          // Sessão expirada ou inválida — invalida contexto para forçar re-login na próxima tentativa
+          await this.closeSession();
+          throw new Error('Campo #termo não encontrado — sessão Legisweb expirada, refazendo login');
         }
 
-        if (p + 1 >= paginas) break;
-        const avancou = await this.clicarProximaPaginaLegisweb(page);
-        if (!avancou) break;
-      }
+        await campoBusca.fill(query);
+        await campoBusca.press('Enter');
 
-      return todas;
-    } finally {
-      await page.close();
-    }
+        await page.getByText(/Sua pesquisa retornou/i).waitFor({ state: 'visible', timeout: 45000 });
+        await page.waitForLoadState('domcontentloaded');
+
+        const todas: LegiswebResultado[] = [];
+        const seen = new Set<string>();
+
+        for (let p = 0; p < paginas; p++) {
+          const chunk = await this.coletarLinksResultadoLegisweb(page);
+          for (const r of chunk) {
+            if (seen.has(r.url)) continue;
+            seen.add(r.url);
+            todas.push(r);
+          }
+
+          if (p + 1 >= paginas) break;
+          const avancou = await this.clicarProximaPaginaLegisweb(page);
+          if (!avancou) break;
+        }
+
+        return todas;
+      } finally {
+        // .catch() necessário: closeSession() fecha o contexto antes do finally em caso de sessão expirada
+        await page.close().catch(() => undefined);
+      }
+    }, 2);
   }
 
   /**
