@@ -106,20 +106,26 @@ export class CarfAgent extends BaseAgent {
     }
   }
 
-  /** Clica no botão de pesquisa. */
+  /** Clica no botão de pesquisa e aguarda navegação. */
   private async clicarPesquisar(page: Page): Promise<void> {
     const botao = page
       .locator('input[type="submit"], button[type="submit"], button')
       .filter({ hasText: /pesquisar|buscar|consultar/i })
-      .first()
-      .or(page.getByRole('button', { name: /pesquisar|buscar|consultar/i }).first());
+      .first();
 
     if ((await botao.count()) > 0) {
-      await botao.click();
+      await Promise.all([
+        page.waitForLoadState('domcontentloaded', { timeout: 60000 }),
+        botao.click(),
+      ]);
     } else {
-      // Fallback: submete via Enter no campo de busca
-      await page.keyboard.press('Enter');
+      await Promise.all([
+        page.waitForLoadState('domcontentloaded', { timeout: 60000 }),
+        page.keyboard.press('Enter'),
+      ]);
     }
+    // Estabilização extra para portais JSF lentos
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   /** Aguarda a tabela de resultados ficar visível. */
