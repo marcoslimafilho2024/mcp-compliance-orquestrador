@@ -145,9 +145,23 @@ export class LegiswebAgent extends BaseAgent {
           .catch(() => false);
 
         if (!visivel) {
-          // Sessão expirada ou inválida — invalida contexto para forçar re-login na próxima tentativa
+          // Captura diagnóstico antes de fechar a sessão
+          const urlAtual = page.url();
+          const titulo = await page.title().catch(() => '(sem título)');
+          const inputsVisiveis = await page.evaluate(() =>
+            Array.from(document.querySelectorAll('input')).map((el) => ({
+              id: el.id,
+              name: el.name,
+              type: el.type,
+              placeholder: el.placeholder,
+            })),
+          ).catch(() => []);
+
+          // Invalida contexto para forçar re-login na próxima tentativa
           await this.closeSession();
-          throw new Error('Campo #termo não encontrado — sessão Legisweb expirada, refazendo login');
+          throw new Error(
+            `Campo #termo não encontrado — diagnóstico: url="${urlAtual}", titulo="${titulo}", inputs=${JSON.stringify(inputsVisiveis)}`,
+          );
         }
 
         await campoBusca.fill(query);
