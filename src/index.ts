@@ -10,6 +10,7 @@ import { registerLayoutTools } from './tools/layouts.tools.js';
 import { registerSijutTools } from './tools/sijut.tools.js';
 import { registerDriveTools } from './tools/drive.tools.js';
 import { registerCarfTools } from './tools/carf.tools.js';
+import { registerTrelloTools } from './tools/trello.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -35,6 +36,7 @@ function createMcpServer(): McpServer {
   registerSijutTools(server, sijutAgent);
   registerDriveTools(server);
   registerCarfTools(server, carfAgent);
+  registerTrelloTools(server);
 
   return server;
 }
