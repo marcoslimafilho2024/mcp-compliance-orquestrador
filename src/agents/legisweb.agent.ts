@@ -51,6 +51,7 @@ export class LegiswebAgent extends BaseAgent {
       throw new Error('LEGISWEB_USER e LEGISWEB_PASS são obrigatórios no .env');
     }
 
+    // tentativas=1: sem retry interno — o retry em buscar() cobre re-login após closeSession
     await this.retry(async () => {
       const context = await this.newContextIfNeeded();
       const page = await context.newPage();
@@ -68,15 +69,15 @@ export class LegiswebAgent extends BaseAgent {
         await campoSenha.fill(this.pass, { force: true });
         await campoSenha.press('Enter');
 
-        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() =>
-          page.waitForLoadState('domcontentloaded', { timeout: 15000 }),
-        );
+        // networkidle trava em sites com tracking contínuo — usa domcontentloaded + espera de link
+        await page.waitForLoadState('domcontentloaded', { timeout: 15000 });
 
-        // Verifica autenticação: usuário logado tem acesso a links /assinante/
+        // Verifica autenticação: usuário logado tem link /assinante/ no menu (aguarda até 10s)
         const autenticado = await page
           .locator('a[href*="/assinante/"]')
           .first()
-          .isVisible()
+          .waitFor({ state: 'attached', timeout: 10000 })
+          .then(() => true)
           .catch(() => false);
 
         if (!autenticado) {
@@ -86,7 +87,7 @@ export class LegiswebAgent extends BaseAgent {
       } finally {
         await page.close();
       }
-    });
+    }, 1);
   }
 
   async buscar(query: string, opcoes?: { paginas?: number }): Promise<LegiswebResultado[]> {
