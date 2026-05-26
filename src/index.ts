@@ -13,6 +13,7 @@ import { registerDriveTools } from './tools/drive.tools.js';
 import { registerCarfTools } from './tools/carf.tools.js';
 import { registerTrelloTools } from './tools/trello.tools.js';
 import { registerCarfAcordaosTools } from './tools/carfacordaos.tools.js';
+import { registerGmailTools } from './tools/gmail.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -41,6 +42,7 @@ function createMcpServer(): McpServer {
   registerCarfTools(server, carfAgent);
   registerTrelloTools(server);
   registerCarfAcordaosTools(server, carfAcordaosAgent);
+  registerGmailTools(server);
 
   return server;
 }
