@@ -1,24 +1,60 @@
 // src/tools/gmail.tools.ts
 // Ferramentas Gmail para o MCP Compliance Orquestrador
-// Gmail API REST — credenciais via env GMAIL_ACCESS_TOKEN (escopo gmail.compose)
-// Drive API para baixar anexos — env GOOGLE_ACCESS_TOKEN (escopo drive.readonly)
+// Autenticação: GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN
+// Access tokens são obtidos automaticamente via refresh e cacheados por 55 min.
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const DRIVE_BASE = 'https://www.googleapis.com/drive/v3';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-function gmailToken(): string {
-  const token = process.env.GMAIL_ACCESS_TOKEN;
-  if (!token) throw new Error('GMAIL_ACCESS_TOKEN é obrigatório (escopo gmail.compose)');
-  return token;
-}
+// Cache em memória — reinicia quando o servidor reinicia (Railway redeploy)
+let _tokenCache: { accessToken: string; expiresAt: number } | null = null;
 
-function driveToken(): string {
-  const token = process.env.GOOGLE_ACCESS_TOKEN;
-  if (!token) throw new Error('GOOGLE_ACCESS_TOKEN é obrigatório para baixar anexos do Drive');
-  return token;
+async function getGoogleAccessToken(): Promise<string> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+  // Fallback: tokens estáticos legados (retrocompatibilidade)
+  if (!clientId || !clientSecret || !refreshToken) {
+    const legacy = process.env.GMAIL_ACCESS_TOKEN ?? process.env.GOOGLE_ACCESS_TOKEN;
+    if (legacy) return legacy;
+    throw new Error(
+      'Configure GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REFRESH_TOKEN no Railway ' +
+        'para autenticação permanente.',
+    );
+  }
+
+  // Retornar token cacheado se ainda válido (margem de 60 s)
+  if (_tokenCache && _tokenCache.expiresAt > Date.now() + 60_000) {
+    return _tokenCache.accessToken;
+  }
+
+  // Trocar refresh token por novo access token
+  const res = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google token refresh falhou: ${res.status} ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as { access_token: string; expires_in: number };
+  _tokenCache = {
+    accessToken: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+  return _tokenCache.accessToken;
 }
 
 function bufferToBase64Url(buf: Buffer): string {
@@ -35,16 +71,18 @@ interface DriveFileMeta {
 }
 
 async function getDriveFileMeta(fileId: string): Promise<DriveFileMeta> {
+  const token = await getGoogleAccessToken();
   const res = await fetch(`${DRIVE_BASE}/files/${fileId}?fields=name,mimeType`, {
-    headers: { Authorization: `Bearer ${driveToken()}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Drive meta ${fileId}: ${res.status} ${await res.text()}`);
   return res.json() as Promise<DriveFileMeta>;
 }
 
 async function getDriveFileContent(fileId: string): Promise<Buffer> {
+  const token = await getGoogleAccessToken();
   const res = await fetch(`${DRIVE_BASE}/files/${fileId}?alt=media`, {
-    headers: { Authorization: `Bearer ${driveToken()}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Drive download ${fileId}: ${res.status} ${await res.text()}`);
   return Buffer.from(await res.arrayBuffer());
@@ -99,7 +137,7 @@ export function registerGmailTools(server: McpServer): void {
     {
       description:
         'Cria rascunho no Gmail com suporte a anexos de arquivos do Google Drive. ' +
-        'Requer GMAIL_ACCESS_TOKEN (escopo gmail.compose) e, para anexos, GOOGLE_ACCESS_TOKEN (escopo drive.readonly).',
+        'Requer GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_REFRESH_TOKEN no Railway.',
       inputSchema: {
         para: z.array(z.string()).describe('Lista de emails destinatários'),
         cc: z.array(z.string()).optional().describe('Lista de emails em cópia'),
@@ -113,7 +151,7 @@ export function registerGmailTools(server: McpServer): void {
     },
     async ({ para, cc, assunto, corpo_html, drive_file_ids }) => {
       try {
-        const token = gmailToken();
+        const token = await getGoogleAccessToken();
 
         // Obter endereço do remetente via perfil Gmail
         const profileRes = await fetch(`${GMAIL_BASE}/profile`, {
