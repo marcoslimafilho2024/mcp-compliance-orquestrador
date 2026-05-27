@@ -227,4 +227,90 @@ export function registerGmailTools(server: McpServer): void {
       }
     },
   );
+
+  server.registerTool(
+    'gmail_enviar',
+    {
+      description:
+        'Envia email pelo Gmail com suporte a anexos de arquivos do Google Drive. ' +
+        'Requer GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GMAIL_REFRESH_TOKEN + GOOGLE_REFRESH_TOKEN no Railway.',
+      inputSchema: {
+        para: z.array(z.string()).describe('Lista de emails destinatarios'),
+        cc: z.array(z.string()).optional().describe('Lista de emails em copia'),
+        assunto: z.string().describe('Assunto do email'),
+        corpo_html: z.string().describe('Corpo do email em HTML'),
+        drive_file_ids: z
+          .array(z.string())
+          .optional()
+          .describe('IDs de arquivos no Google Drive para anexar'),
+      },
+    },
+    async ({ para, cc, assunto, corpo_html, drive_file_ids }) => {
+      try {
+        const token = await getAccessToken('gmail');
+
+        const profileRes = await fetch(`${GMAIL_BASE}/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!profileRes.ok)
+          throw new Error(`Gmail profile: ${profileRes.status} ${await profileRes.text()}`);
+        const profile = (await profileRes.json()) as { emailAddress: string };
+
+        const attachments: Array<{ name: string; mimeType: string; content: Buffer }> = [];
+        for (const fileId of drive_file_ids ?? []) {
+          const [meta, content] = await Promise.all([
+            getDriveFileMeta(fileId),
+            getDriveFileContent(fileId),
+          ]);
+          attachments.push({ name: meta.name, mimeType: meta.mimeType, content });
+        }
+
+        const rawMime = buildMimeMessage({
+          from: profile.emailAddress,
+          to: para,
+          cc,
+          subject: assunto,
+          htmlBody: corpo_html,
+          attachments,
+        });
+        const rawEncoded = bufferToBase64Url(Buffer.from(rawMime, 'utf8'));
+
+        const sendRes = await fetch(`${GMAIL_BASE}/messages/send`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ raw: rawEncoded }),
+        });
+        if (!sendRes.ok)
+          throw new Error(`Gmail send: ${sendRes.status} ${await sendRes.text()}`);
+
+        const sent = (await sendRes.json()) as { id: string; threadId: string };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  ok: true,
+                  message_id: sent.id,
+                  thread_id: sent.threadId,
+                  assunto,
+                  para,
+                  cc: cc ?? [],
+                  anexos: attachments.map((a) => a.name),
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        return { content: [{ type: 'text', text: String(err) }], isError: true };
+      }
+    },
+  );
 }
