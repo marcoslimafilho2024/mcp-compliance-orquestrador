@@ -59,41 +59,36 @@ const ESTRUTURA_PARECER = {
     },
     {
       numero: 3,
-      titulo: 'Base Legal Atualizada',
-      conteudo: "Artigos, incisos e alíneas aplicáveis. Formato: 'LC 214/2025, art. 27, § 3º, inciso II, alínea a'",
-    },
-    {
-      numero: 4,
       titulo: 'Interpretação Normativa',
       conteudo: 'Análise técnica da norma, hermenêutica jurídico-contábil, posicionamento doutrinário quando relevante',
     },
     {
-      numero: 5,
+      numero: 4,
       titulo: 'Implicações Práticas',
       conteudo: 'Consequências concretas para o contribuinte: impacto fiscal, operacional e contábil',
     },
     {
-      numero: 6,
+      numero: 5,
       titulo: 'Orientações Operacionais',
       conteudo: 'O que o cliente deve fazer: prazos, procedimentos, ajustes em sistemas e documentos',
     },
     {
-      numero: 7,
+      numero: 6,
       titulo: 'Vedações ou Exceções',
       conteudo: 'Restrições legais, exceções à regra geral, riscos de autuação fiscal',
     },
     {
-      numero: 8,
+      numero: 7,
       titulo: 'Citações Complementares',
       conteudo: 'Jurisprudência (STJ, TRFs, CARF), Soluções de Consulta RFB, manifestações SEFAZ, doutrina',
     },
     {
-      numero: 9,
+      numero: 8,
       titulo: 'Conclusão',
       conteudo: 'Síntese objetiva do posicionamento — resposta direta à pergunta do cliente',
     },
     {
-      numero: 10,
+      numero: 9,
       titulo: 'Assinatura Técnica',
       conteudo: 'Nome completo, número CRC, data e qualificação do responsável técnico',
     },
@@ -355,7 +350,7 @@ export function registerLayoutTools(server: McpServer): void {
   server.registerTool(
     'layout_estrutura_parecer',
     {
-      description: "Estrutura completa do parecer técnico (10 seções). versao: 'padrao', 'compliance' ou 'guerra'",
+      description: "Estrutura completa do parecer técnico (9 seções). versao: 'padrao', 'compliance' ou 'guerra'",
       inputSchema: {
         versao: z
           .enum(['padrao', 'compliance', 'guerra'])
@@ -379,7 +374,7 @@ export function registerLayoutTools(server: McpServer): void {
             text: JSON.stringify(
               {
                 template_a_usar: TEMPLATES_CATALOG[chave],
-                estrutura_10_secoes: ESTRUTURA_PARECER.secoes,
+                estrutura_9_secoes: ESTRUTURA_PARECER.secoes,
                 instrucoes_gerais: ESTRUTURA_PARECER.instrucoes_gerais,
                 versao_solicitada: versao,
               },
