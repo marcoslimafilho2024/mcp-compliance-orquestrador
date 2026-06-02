@@ -55,13 +55,14 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
     itens: [
       { id: 'BL1', item: 'LC 214/2025 citada com artigos específicos (nunca apenas "LC 214/2025")', como_verificar: 'Cada referência tem art. Xº identificado', critico: true },
       { id: 'BL2', item: 'EC 132/2023, art. 149-B, CF — tributação "por fora" e não cumulatividade', como_verificar: 'Presente no cabeçalho (LEGISLAÇÃO) e/ou Citações Complementares', critico: true },
-      { id: 'BL3', item: 'CPC 00 (R2) — Capítulo 5 (Reconhecimento e Desreconhecimento)', como_verificar: 'Citado como "CPC 00 (R2), Capítulo 5" — NÃO "itens 4.26-4.36" (numeração R1 obsoleta)', critico: true },
+      { id: 'BL3', item: 'CPC 00 (R2), Capítulo 5 (Reconhecimento e Desreconhecimento)', como_verificar: 'Citado como "CPC 00 (R2), Capítulo 5" — NÃO "itens 4.26-4.36" (numeração R1 obsoleta)', critico: true },
       { id: 'BL4', item: 'CPC 51 — Apresentação e Divulgação (jan/2026)', como_verificar: 'Presente em Base Legal e Citações', critico: true },
       { id: 'BL5', item: 'NBC TG 51 — Apresentação e Divulgação (fev/2026, CFC)', como_verificar: 'Presente em Base Legal e Citações', critico: true },
       { id: 'BL6', item: 'NBC TG 32 (R4) citada como referência POR ANALOGIA — não como norma direta', como_verificar: 'Texto deve conter "(por analogia)" ou "referência por analogia"', critico: true },
       { id: 'BL7', item: 'Ato Conjunto RFB/CGIBS nº 1/2025 — penalidades e fase teste', como_verificar: 'Presente quando o parecer trata de 2026', critico: false },
       { id: 'BL8', item: 'Informe Técnico 2026.002 v.1.00 — alíquotas CBS 0,9% + IBS 0,1%', como_verificar: 'Presente quando há menção de alíquotas de 2026', critico: false },
       { id: 'BL9', item: 'LACUNA NORMATIVA declarada — nenhum CPC/NBC específico sobre IBS/CBS', como_verificar: 'Texto menciona ausência de pronunciamento específico do CPC/CFC', critico: true },
+      { id: 'BL10', item: 'Reconhecimento contábil: regime de competência declarado explicitamente (IBS/CBS reconhecido quando ocorre o fato gerador, não no pagamento)', como_verificar: 'Parecer menciona regime de competência e cita CPC 00 (R2) Capítulo 5 como fundamento; distingue da base de caixa do DAS/Simples quando aplicável', critico: true },
     ],
   },
   linguagem: {
