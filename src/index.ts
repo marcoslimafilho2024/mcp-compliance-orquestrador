@@ -22,6 +22,7 @@ import { registerYoutubeTools } from './tools/youtube.tools.js';
 import { registerRevisaoTools } from './tools/revisao.tools.js';
 import { registerSlidesTools } from './tools/slides.tools.js';
 import { registerAlegacoesTools } from './tools/alegacoes.tools.js';
+import { registerFontesOficiaisTools } from './tools/fontes_oficiais.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -39,7 +40,12 @@ function createMcpServer(): McpServer {
     },
     {
       instructions:
-        'Ferramentas de compliance: Legisweb e Tax Prático. Use buscar_* antes de extrair_* quando não houver URL direta.',
+        'MCP de Compliance Tributário — Reforma Tributária IBS/CBS (LC 214/2025). ' +
+        'Fluxo para respostas técnicas: (1) fonte_lc214_mapa_temas → identificar artigos; ' +
+        '(2) fonte_artigo_url → URL para fetch do texto legal; ' +
+        '(3) alegacao_estrutura_resposta → estrutura dos 7 tópicos; ' +
+        '(4) revisao_checklist_parecer → validar antes de entregar. ' +
+        'Pesquisa externa: buscar_* antes de extrair_* quando não houver URL direta.',
     },
   );
 
@@ -59,6 +65,7 @@ function createMcpServer(): McpServer {
   registerRevisaoTools(server);
   registerSlidesTools(server);
   registerAlegacoesTools(server);
+  registerFontesOficiaisTools(server);
 
   return server;
 }
