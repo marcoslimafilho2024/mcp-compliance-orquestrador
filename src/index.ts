@@ -16,6 +16,9 @@ import { registerTrelloTools } from './tools/trello.tools.js';
 import { registerCarfAcordaosTools } from './tools/carfacordaos.tools.js';
 import { registerGmailTools } from './tools/gmail.tools.js';
 import { registerKeepTools } from './tools/keep.tools.js';
+import { registerCpcTools } from './tools/cpc.tools.js';
+import { registerCfcTools } from './tools/cfc.tools.js';
+import { registerYoutubeTools } from './tools/youtube.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -47,6 +50,9 @@ function createMcpServer(): McpServer {
   registerCarfAcordaosTools(server, carfAcordaosAgent);
   registerGmailTools(server);
   registerKeepTools(server, keepAgent);
+  registerCpcTools(server);
+  registerCfcTools(server);
+  registerYoutubeTools(server);
 
   return server;
 }
