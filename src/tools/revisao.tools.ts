@@ -85,6 +85,17 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'EN4', item: 'Pasta nomeada com "RESPONDER" removido após entrega', como_verificar: 'Renomear "Parecer 02 - Simples Nacional [RESPONDER]" → "Parecer 02 - Simples Nacional [ENTREGUE]"', critico: false },
     ],
   },
+  modo_parecer: {
+    descricao: 'Verificação do modo de parecer (Geral ou Empresarial)',
+    itens: [
+      { id: 'M1', item: 'Modo confirmado com o usuário ANTES de iniciar o parecer (Compliance Geral ou Compliance Empresarial)', como_verificar: 'Verificar se houve confirmação explícita do usuário antes de começar a escrever o conteúdo', critico: true },
+      { id: 'M2', item: 'Modo Geral: todas as 9 seções completas com profundidade técnica (Cabeçalho, Questionamento, Interpretação Normativa, Implicações, Orientações, Vedações, Citações, Conclusão, Assinatura)', como_verificar: 'Verificar presença e extensão adequada de cada seção — N/A se modo=empresarial', critico: true },
+      { id: 'M3', item: 'Modo Empresarial: todas as 9 seções presentes mesmo que condensadas — nenhuma pode ser omitida', como_verificar: 'Verificar: Cabeçalho, A Situação, A Resposta, Implicações, O que fazer, Riscos, Base Legal, Conclusão, Assinatura — N/A se modo=geral', critico: true },
+      { id: 'M4', item: 'Modo Empresarial: linguagem acessível — sem jargão técnico não explicado (DAE, CST, CFOP, CFGE sem definição prévia)', como_verificar: 'Revisar se termos técnicos foram substituídos ou explicados — N/A se modo=geral', critico: true },
+      { id: 'M5', item: 'Modo Empresarial: máximo 5 páginas estimadas', como_verificar: 'Estimar pelo número de seções, tabelas e tamanho dos parágrafos — N/A se modo=geral', critico: false },
+      { id: 'M6', item: 'Título do documento correto: "PARECER TÉCNICO-TRIBUTÁRIO" (Geral) ou "NOTA TÉCNICA TRIBUTÁRIA" (Empresarial)', como_verificar: 'Verificar o add_run do título no script Python', critico: true },
+    ],
+  },
 };
 
 const NORMAS_VIGENTES = {
@@ -155,15 +166,16 @@ export function registerRevisaoTools(server: McpServer): void {
     'revisao_checklist_parecer',
     {
       description:
-        'Retorna o checklist completo de revisão para pareceres Guerra Advogados. ' +
+        'Retorna o checklist completo de revisão para pareceres Compliance-CE / Guerra Advogados. ' +
         'Usar SEMPRE antes de finalizar ou entregar qualquer parecer técnico. ' +
-        'Cobre: template, formatação, estrutura, base legal IBS/CBS, linguagem e entrega.',
+        'Cobre: template, formatação, estrutura, base legal IBS/CBS, linguagem, entrega e modo_parecer (Geral vs Empresarial). ' +
+        'Usar categoria "modo_parecer" para verificar se o modo foi confirmado e seguido corretamente.',
       inputSchema: {
         categoria: z
-          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'todas'])
+          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'modo_parecer', 'todas'])
           .optional()
           .default('todas')
-          .describe('Categoria específica ou "todas" para checklist completo.'),
+          .describe('Categoria específica ou "todas" para checklist completo. Use "modo_parecer" para verificar Geral vs Empresarial.'),
       },
     },
     async ({ categoria = 'todas' }) => {

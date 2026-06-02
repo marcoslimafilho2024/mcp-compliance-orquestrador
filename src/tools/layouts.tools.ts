@@ -102,6 +102,50 @@ const ESTRUTURA_PARECER = {
   ],
 };
 
+const PERGUNTA_MODO = {
+  instrucao: 'OBRIGATÓRIO: antes de iniciar qualquer parecer, perguntar ao usuário qual modo usar.',
+  pergunta: 'Vamos usar Compliance Geral (parecer técnico completo, base legal detalhada) ou Compliance Empresarial (nota resumida, máx. 3-5 páginas, linguagem direta para o empresário)?',
+  opcoes: {
+    geral: {
+      label: 'Compliance Geral',
+      descricao: 'Parecer técnico completo com todas as 9 seções, base legal explícita, linguagem técnica formal',
+      quando_usar: 'Defesa fiscal, arquivamento permanente, terceiros técnicos (advogados, auditores, SEFAZ)',
+      titulo_documento: 'PARECER TÉCNICO-TRIBUTÁRIO',
+    },
+    empresarial: {
+      label: 'Compliance Empresarial',
+      descricao: 'Nota técnica condensada, máx. 3-5 páginas, linguagem acessível ao empresário, resposta direta',
+      quando_usar: 'Decisão operacional rápida, comunicação ao cliente empresário, gestor não especialista',
+      titulo_documento: 'NOTA TÉCNICA TRIBUTÁRIA',
+    },
+  },
+};
+
+const ESTRUTURA_PARECER_EMPRESARIAL = {
+  titulo_documento: 'NOTA TÉCNICA TRIBUTÁRIA',
+  paginas_max: 5,
+  linguagem: 'Direta e acessível ao empresário. Sem jargão técnico excessivo. Frases curtas. Respostas diretas. Usar "boleto" em vez de "DAE", "imposto" em vez de "tributo", "nota fiscal" em vez de "NF-e".',
+  secoes: [
+    { numero: 1, titulo: 'Cabeçalho', conteudo: 'Empresa (razão social e CNPJ), solicitante, responsável técnico, data e assunto resumido', condensado: 'Tabela compacta — máx. 5 linhas' },
+    { numero: 2, titulo: 'A Situação', conteudo: 'O que aconteceu, em linguagem simples. 1-2 parágrafos. Sem base legal no corpo.', condensado: 'Substitui "I. QUESTIONAMENTO"' },
+    { numero: 3, titulo: 'A Resposta', conteudo: 'Resposta direta à pergunta principal: sim ou não, e por quê em linguagem simples. Cálculo em tabela quando relevante.', condensado: 'Substitui "II. INTERPRETAÇÃO NORMATIVA" — condensada e sem artigos no corpo' },
+    { numero: 4, titulo: 'Implicações Práticas', conteudo: 'Custo real, impacto no preço, comparativos. Tabelas curtas.', condensado: 'Condensado' },
+    { numero: 5, titulo: 'O que fazer', conteudo: 'Passos numerados, máx. 3-5 itens. Linguagem imperativa e direta.', condensado: 'Engloba "ORIENTAÇÕES OPERACIONAIS" e principais "VEDAÇÕES"' },
+    { numero: 6, titulo: 'Riscos Principais', conteudo: 'Máx. 2-3 riscos críticos em linguagem simples, sem citação de artigos.', condensado: 'Condensado de "V. VEDAÇÕES"' },
+    { numero: 7, titulo: 'Base Legal Resumida', conteudo: 'Tabela com máx. 5 normas essenciais. Sem citação artigo por artigo no corpo do texto.', condensado: 'Condensado de "VI. CITAÇÕES COMPLEMENTARES"' },
+    { numero: 8, titulo: 'Conclusão', conteudo: 'Resposta final em 3-5 linhas. Ação imediata recomendada.', condensado: 'Presente e obrigatória' },
+    { numero: 9, titulo: 'Assinatura Técnica', conteudo: 'Nome, CRC, data. Parecerista responsável. Tabela compacta.', condensado: 'Idêntica ao modo Geral' },
+  ],
+  instrucoes_gerais: [
+    'Usar o mesmo template DOCX do modo Geral — identidade visual idêntica',
+    'Máximo 3-5 páginas — condensar sem omitir as 9 seções',
+    'Linguagem do dia a dia: "boleto" em vez de "DAE", "imposto" em vez de "tributo exigido", "nota fiscal" em vez de "NF-e"',
+    'Todas as 9 seções são obrigatórias — podem ser mais curtas, mas não podem ser omitidas',
+    'Tabelas são recomendadas para comparativos e custos',
+    'Reservar citações de artigos de lei para a tabela da seção 7 — não citar no corpo do texto',
+  ],
+};
+
 const REGRAS_DOCX = {
   espacamento_linhas: 1.5,
   alinhamento: 'justificado',
@@ -350,7 +394,11 @@ export function registerLayoutTools(server: McpServer): void {
   server.registerTool(
     'layout_estrutura_parecer',
     {
-      description: "Estrutura completa do parecer técnico (9 seções). versao: 'padrao', 'compliance' ou 'guerra'",
+      description:
+        "Estrutura completa do parecer técnico (9 seções). " +
+        "IMPORTANTE: antes de iniciar qualquer parecer, perguntar ao usuário qual modo usar: " +
+        "'Compliance Geral' (técnico completo) ou 'Compliance Empresarial' (resumido, 3-5 páginas, linguagem direta). " +
+        "versao: 'padrao' | 'compliance' | 'guerra'. modo: 'geral' | 'empresarial'.",
       inputSchema: {
         versao: z
           .enum(['padrao', 'compliance', 'guerra'])
@@ -359,23 +407,38 @@ export function registerLayoutTools(server: McpServer): void {
           .describe(
             "Versão do template: 'padrao' (sem identidade visual) | 'compliance' (Compliance-CE) | 'guerra' (Guerra Advogados)",
           ),
+        modo: z
+          .enum(['geral', 'empresarial'])
+          .optional()
+          .default('geral')
+          .describe(
+            "Modo do parecer: 'geral' (técnico completo, 9 seções extensas) | 'empresarial' (condensado, máx. 3-5 páginas, linguagem simples). SEMPRE perguntar ao usuário antes de iniciar.",
+          ),
       },
     },
-    async ({ versao }) => {
+    async ({ versao, modo }) => {
       const mapa: Record<string, keyof typeof TEMPLATES_CATALOG> = {
         compliance: 'parecer_compliance',
         guerra: 'parecer_guerra',
       };
       const chave = mapa[versao ?? 'padrao'] ?? 'parecer_padrao';
+      const estrutura = modo === 'empresarial' ? ESTRUTURA_PARECER_EMPRESARIAL : null;
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
               {
+                pergunta_inicial: PERGUNTA_MODO,
+                modo_selecionado: modo ?? 'geral',
                 template_a_usar: TEMPLATES_CATALOG[chave],
-                estrutura_9_secoes: ESTRUTURA_PARECER.secoes,
-                instrucoes_gerais: ESTRUTURA_PARECER.instrucoes_gerais,
+                estrutura_9_secoes: estrutura ? estrutura.secoes : ESTRUTURA_PARECER.secoes,
+                instrucoes_gerais: estrutura ? estrutura.instrucoes_gerais : ESTRUTURA_PARECER.instrucoes_gerais,
+                ...(estrutura ? {
+                  titulo_documento: estrutura.titulo_documento,
+                  paginas_max: estrutura.paginas_max,
+                  linguagem: estrutura.linguagem,
+                } : {}),
                 versao_solicitada: versao,
               },
               null,
