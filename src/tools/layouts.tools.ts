@@ -19,13 +19,23 @@ const TEMPLATES_CATALOG = {
     ja_formatado: true,
   },
   parecer_guerra: {
-    arquivo: 'PARECER CONTÁBIL E TRIBUTÁRIO - MODELO.docx',
-    caminho: '00_Genesis/_layouts/PARECER CONTÁBIL E TRIBUTÁRIO - MODELO.docx',
+    arquivo: 'PARECER TÉCNICO - MODELO.docx',
+    caminho: 'Consultorias Guerra/00_Modelos/PARECER TÉCNICO - MODELO.docx',
+    caminho_windows: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\PARECER TÉCNICO - MODELO.docx',
     tipo: 'docx',
-    proposito: 'Parecer com identidade visual da Guerra Advogados',
+    proposito: 'Template de Parecer Técnico com identidade visual da Guerra Advogados',
     quando_usar:
-      'Pareceres emitidos sob a marca Guerra Advogados (consultoria Fortes Tecnologia, Thompson Reuters, Contabilizei e similares)',
+      'Pareceres emitidos sob a marca Guerra Advogados (clientes: Contabilizei, Fortes Tecnologia, Thompson/Domínio Sistemas, São Geraldo)',
     ja_formatado: true,
+    pareceristas: [
+      'Fellipe Guerra — CRC 21.074',
+      'Marcos Lima — CRC 23.224',
+      'Mathaus Pordeus — OAB 52.206',
+    ],
+    email_templates: {
+      perguntas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Perguntas.pdf',
+      respostas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Resposta.pdf',
+    },
   },
   book_demonstracoes: {
     arquivo: 'EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',

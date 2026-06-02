@@ -21,6 +21,7 @@ import { registerCfcTools } from './tools/cfc.tools.js';
 import { registerYoutubeTools } from './tools/youtube.tools.js';
 import { registerRevisaoTools } from './tools/revisao.tools.js';
 import { registerSlidesTools } from './tools/slides.tools.js';
+import { registerAlegacoesTools } from './tools/alegacoes.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -57,6 +58,7 @@ function createMcpServer(): McpServer {
   registerYoutubeTools(server);
   registerRevisaoTools(server);
   registerSlidesTools(server);
+  registerAlegacoesTools(server);
 
   return server;
 }
