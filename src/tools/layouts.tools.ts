@@ -64,7 +64,7 @@ const ESTRUTURA_PARECER = {
     {
       numero: 1,
       titulo: 'Cabeçalho',
-      conteudo: 'Data, razão social e CNPJ do cliente, identificação do solicitante e do parecerista',
+      conteudo: 'Tabela com EXATAMENTE 4 linhas: CONSULENTE | DATA | ASSUNTO | LEGISLAÇÃO. PROIBIDO adicionar campo ELABORAÇÃO ou PARECERISTAS no cabeçalho. Dados do parecerista ficam apenas na Assinatura (seção 9).',
     },
     {
       numero: 2,
@@ -342,7 +342,7 @@ const REGRAS_LINGUAGEM = {
     paragrafos: 'Um parágrafo = uma ideia. Evitar parágrafos com mais de 6 linhas.',
     voz: 'Preferir voz ativa. Evitar construções passivas longas.',
     tom: "Técnico e objetivo. Sem adjetivos desnecessários ('extremamente importante', 'absolutamente necessário').",
-    numeracao: 'Seções numeradas com algarismo romano (I, II, III). Subseções com número decimal (1.1, 1.2).',
+    numeracao: 'Seções numeradas com algarismo romano (I, II, III). Subseções com romano + decimal (II.1, II.2, III.1). NUNCA usar decimal puro (2.1, 2.2) — o prefixo romano é obrigatório.',
     listas: 'Bullet (•) para itens sem ordem. Número para sequência ou prioridade.',
   },
   checklist_revisao: [
