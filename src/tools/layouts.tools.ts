@@ -60,59 +60,65 @@ const TEMPLATES_CATALOG = {
 };
 
 const ESTRUTURA_PARECER = {
+  titulo_documento: 'PARECER JURÍDICO - TRIBUTÁRIO E FISCAL',
   secoes: [
     {
-      numero: 1,
+      numero: 0,
       titulo: 'Cabeçalho',
-      conteudo: 'Tabela com EXATAMENTE 4 linhas: CONSULENTE | DATA | ASSUNTO | LEGISLAÇÃO. PROIBIDO adicionar campo ELABORAÇÃO ou PARECERISTAS no cabeçalho. Dados do parecerista ficam apenas na Assinatura (seção 9).',
+      conteudo: 'Tabela com EXATAMENTE 4 campos: CONSULENTE | DATA | ASSUNTO | LEGISLAÇÃO. PROIBIDO adicionar ELABORAÇÃO, PARECERISTAS ou qualquer outro campo. Dados dos pareceristas ficam exclusivamente na Assinatura.',
+    },
+    {
+      numero: 0,
+      titulo: 'EMENTA',
+      conteudo: 'Parágrafo após o cabeçalho, imediatamente antes de I. RELATÓRIO. Todo em MAIÚSCULAS. Temas separados por ponto final. Máx. 8 linhas. Reflete fielmente a conclusão jurídica adotada. Elaborar somente após concluir a análise completa.',
+      regras: [
+        'EMENTA: [TEMA PRINCIPAL]. [CONTEXTO]. [ENQUADRAMENTO LEGAL]. [TESE JURÍDICA]. [CONCLUSÃO]. [REQUISITOS APLICÁVEIS].',
+        'Sem parágrafos internos e sem numeração',
+        'Permitir compreensão da matéria e conclusão sem leitura do documento completo',
+        'Não reproduzir transcrições extensas de dispositivos legais',
+      ],
+    },
+    {
+      numero: 1,
+      titulo: 'I. RELATÓRIO',
+      conteudo: 'Contextualização da consulta. Apresentar os fatos relevantes e delimitar o objeto da análise. Identificar as perguntas formuladas pela consulente. PROIBIDO nesta seção: conclusões jurídicas, antecipação de entendimento, respostas aos questionamentos.',
     },
     {
       numero: 2,
-      titulo: 'Questionamento',
-      conteudo: 'Contexto da consulta, base legal citada pelo cliente, perguntas ou dúvidas levantadas',
+      titulo: 'II. FUNDAMENTAÇÃO',
+      conteudo: 'Núcleo técnico do parecer. Estruturar com os 7 tópicos da metodologia Guerra. Sequência por ponto: (a) apresentação da norma com dispositivo completo, (b) interpretação jurídica, (c) aplicação ao caso, (d) conclusão parcial. Subseções: II.1, II.2, II.3 (e II.1.1, II.1.2 quando necessário).',
+      metodologia_7_topicos: [
+        'II.1 — Contexto do Questionamento',
+        'II.2 — Base Legal Atualizada',
+        'II.3 — Interpretação Normativa',
+        'II.4 — Implicações Práticas',
+        'II.5 — Orientações Operacionais',
+        'II.6 — Vedações e Exceções',
+        'II.7 — Citações Complementares',
+      ],
     },
     {
       numero: 3,
-      titulo: 'Interpretação Normativa',
-      conteudo: 'Análise técnica da norma, hermenêutica jurídico-contábil, posicionamento doutrinário quando relevante',
+      titulo: 'III. EXEMPLOS PRÁTICOS',
+      conteudo: 'Obrigatório quando o tema envolver IBS/CBS, Simples Nacional, Split Payment, cálculos, regimes tributários ou procedimentos operacionais. Dados comparativos e cálculos sempre em tabelas. Pode ser dispensado para temas puramente interpretativos ou conceituais.',
     },
     {
       numero: 4,
-      titulo: 'Implicações Práticas',
-      conteudo: 'Consequências concretas para o contribuinte: impacto fiscal, operacional e contábil',
+      titulo: 'IV. CONCLUSÃO',
+      conteudo: 'Resposta objetiva a TODOS os questionamentos formulados. Não introduzir novos fundamentos ou dispositivos legais. Numerada. Clara, objetiva e executável sem leitura prévia da Fundamentação.',
     },
     {
       numero: 5,
-      titulo: 'Orientações Operacionais',
-      conteudo: 'O que o cliente deve fazer: prazos, procedimentos, ajustes em sistemas e documentos',
-    },
-    {
-      numero: 6,
-      titulo: 'Vedações ou Exceções',
-      conteudo: 'Restrições legais, exceções à regra geral, riscos de autuação fiscal',
-    },
-    {
-      numero: 7,
-      titulo: 'Citações Complementares',
-      conteudo: 'Jurisprudência (STJ, TRFs, CARF), Soluções de Consulta RFB, manifestações SEFAZ, doutrina',
-    },
-    {
-      numero: 8,
-      titulo: 'Conclusão',
-      conteudo: 'Síntese objetiva do posicionamento — resposta direta à pergunta do cliente',
-    },
-    {
-      numero: 9,
-      titulo: 'Assinatura Técnica',
-      conteudo: 'Nome completo, número CRC, data e qualificação do responsável técnico',
+      titulo: 'ASSINATURA',
+      conteudo: '"É o parecer, s.m.j." | Fortaleza, [DATA POR EXTENSO]. | Tabela com 3 pareceristas fixos: Prof. Fellipe Guerra (CRC/CE nº 21.074 | OAB/CE nº 49.759) | Prof. Marcos Lima (CRC/CE nº 23.224) | Prof. Mathaus Pordeus (OAB/CE nº 52.206). Vedada qualquer alteração.',
     },
   ],
   instrucoes_gerais: [
     'Copiar o template para a pasta do projeto antes de editar — NUNCA editar o arquivo original',
     'Sempre citar o dispositivo legal completo (artigo, parágrafo, inciso, alínea)',
     'Revisar pareceres trimestralmente — legislação tributária muda com frequência',
-    'Usar versão -COMPLIANCE para clientes da Compliance-CE',
     "Usar versão 'guerra' para pareceres emitidos sob a marca Guerra Advogados",
+    'A EMENTA é elaborada APÓS concluir a análise, não antes',
   ],
 };
 
@@ -148,7 +154,7 @@ const PERGUNTA_MODO = {
   opcoes: {
     geral: {
       label: 'Compliance Geral',
-      titulo_documento: 'PARECER TÉCNICO-TRIBUTÁRIO',
+      titulo_documento: 'PARECER JURÍDICO - TRIBUTÁRIO E FISCAL',
       paginas_max: 5,
       descricao: 'Parecer técnico completo com todas as 9 seções em extensão integral, base legal explícita artigo por artigo, linguagem técnica formal',
       quando_usar: 'Defesa fiscal, arquivamento permanente, terceiros técnicos (advogados, auditores, SEFAZ, CARF)',
