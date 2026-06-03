@@ -149,7 +149,7 @@ const HIERARQUIA_FONTES = {
       nivel: 4,
       tipo: 'Notas Técnicas SEFAZ/RFB',
       exemplos: [
-        'NT 2025.002 v1.30 — NF-e com IBS/CBS (grupo RTC)',
+        'NT 2025.002 v1.34 — NF-e com IBS/CBS (grupo RTC) — versão atual dez/2025',
         'NT 2025.001 — NFC-e QR Code v3',
         'NT 2024.003 — Produtos Agro NF-e',
       ],
@@ -215,7 +215,7 @@ const GLOSSARIO = {
         'repassando ao erário sem intervenção do contribuinte. B2B a partir de 2027.',
       base_legal: 'LC 214/2025, art. 34',
     },
-    { sigla: 'RTC', nome: 'Registro de Cálculo de Tributos', descricao: 'Grupo XML obrigatório na NF-e 4.0 para informar IBS, CBS e IS', base_legal: 'NT 2025.002 v1.30' },
+    { sigla: 'RTC', nome: 'Registro de Cálculo de Tributos', descricao: 'Grupo XML obrigatório na NF-e 4.0 para informar IBS, CBS e IS. Obrigatório B2B a partir de 2027.', base_legal: 'NT 2025.002 v1.34 (versão atual — dez/2025)' },
     { sigla: 'PGDAS-D', nome: 'Programa Gerador do Documento de Arrecadação do Simples Nacional', descricao: 'Sistema de apuração e recolhimento unificado do Simples Nacional', base_legal: 'Resolução CGSN 140/2018' },
     { sigla: 'RBT12', nome: 'Receita Bruta Total dos últimos 12 meses', descricao: 'Base de cálculo da alíquota progressiva do Simples Nacional', base_legal: 'LC 123/2006' },
     { sigla: 'Fator R', nome: 'Relação Folha/Receita Bruta', descricao: 'Define se empresa de serviços aplica Anexo III ou V do Simples Nacional', base_legal: 'LC 123/2006, Anexo V' },
@@ -241,7 +241,7 @@ const CRONOGRAMA_TRANSICAO = {
     {
       periodo: '2026',
       titulo: 'Fase de Testes',
-      descricao: 'Participação facultativa. Alíquotas teste: CBS 0,9% + IBS 0,1%. Penalidades suspensas até 31/05/2026.',
+      descricao: 'Alíquotas fase teste: CBS 0,9% + IBS 0,1% (Informe Técnico 2026.002). ATENÇÃO: prazo de suspensão de penalidades expirou em 31/05/2026 — obrigações plenamente exigíveis com penalidades desde 01/06/2026.',
       tributos_antigos: 'ICMS/ISS/PIS/COFINS integrais — sem redução ainda',
       obrigacoes: ['Informar grupo RTC na NF-e (facultativo em 2026)', 'PGDAS-D continua para Simples Nacional'],
       base_legal: ['LC 214/2025', 'Ato Conjunto RFB/CGIBS nº 1/2025', 'Informe Técnico 2026.002'],

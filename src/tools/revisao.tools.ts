@@ -37,7 +37,7 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
     ],
   },
   estrutura: {
-    descricao: 'Estrutura obrigatória — 10 seções',
+    descricao: 'Estrutura obrigatória — 9 seções',
     itens: [
       { id: 'E1', item: 'Cabeçalho: tabela com CONSULENTE, DATA, ASSUNTO, LEGISLAÇÃO (4 linhas)', como_verificar: 'Confirmar presença das 4 linhas no tbl_cab — sem PARECERISTAS nem EMITIDO POR', critico: true },
       { id: 'E2', item: 'I. QUESTIONAMENTO — contexto e perguntas enumeradas', como_verificar: 'Seção presente e com as perguntas do solicitante', critico: true },
@@ -69,14 +69,20 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
     ],
   },
   linguagem: {
-    descricao: 'Regras de escrita — proibições e estilo',
+    descricao: 'Regras de escrita — proibições e estilo (Fase 5: revisao_linguagem)',
     itens: [
-      { id: 'L1', item: 'ZERO travessões (—) em texto corrido', como_verificar: 'Buscar "—" no texto; substituir por vírgula ou dois-pontos', critico: true },
-      { id: 'L2', item: 'Nenhuma das 27 palavras-IA proibidas', como_verificar: 'Usar revisao_linguagem(texto) para verificação automática', critico: true },
-      { id: 'L3', item: 'Frases com máx. 2 orações subordinadas', como_verificar: 'Parágrafos com muitas vírgulas ou "que... que... que..."', critico: false },
-      { id: 'L4', item: 'Parágrafos com máx. 6 linhas', como_verificar: 'Dividir parágrafos longos em dois', critico: false },
-      { id: 'L5', item: 'Voz ativa predominante', como_verificar: 'Evitar "é reconhecido", "deve ser feito" — preferir "reconhece-se", "fazer"', critico: false },
-      { id: 'L6', item: 'Seta (→) apenas em lançamentos contábeis — nunca em texto corrido', como_verificar: 'Verificar se há "→" fora de blocos add_lancamentos', critico: false },
+      { id: 'L1', item: 'ZERO travessões (—) em todo o texto corrido', como_verificar: 'Buscar "—" no texto. Substituir por vírgula ou dois-pontos. ERRADO: "O prazo — previsto no art. 3º — é de 30 dias." CERTO: "O prazo previsto no art. 3º é de 30 dias."', critico: true },
+      { id: 'L2', item: 'Nenhuma das 50+ palavras proibidas (destarte, outrossim, consoante, nortear, robusto, expertise, pari passu, ab initio, ex vi...)', como_verificar: 'Usar revisao_linguagem(texto) — retorna cada ocorrência com substituto sugerido', critico: true },
+      { id: 'L3', item: 'Nenhum erro gramatical ("a nível de", "ao meu ver")', como_verificar: 'Verificar na lista de violações retornada pela ferramenta. "a nível de" → "no âmbito de" / "em termos de"', critico: true },
+      { id: 'L4', item: 'Sem gerundismo em escrita técnica formal ("estaremos analisando", "iremos verificando")', como_verificar: 'Substituir por forma verbal direta: "analisaremos", "verificará", "será enviado"', critico: true },
+      { id: 'L5', item: 'Sem seta (→) em texto corrido — apenas em lançamentos contábeis e diagramas técnicos', como_verificar: 'Verificar se há "→" fora de blocos de lançamentos contábeis', critico: false },
+      { id: 'L6', item: 'Sem "através de" com sentido de instrumento ou método', como_verificar: 'Substituir por "por meio de" (instrumento/método) ou "mediante" (formalidade)', critico: false },
+      { id: 'L7', item: 'Colocação pronominal correta — pronome oblíquo não inicia frase', como_verificar: 'Reorganizar: "Cabe-nos", "Foi-lhe informado", ou usar sujeito explícito', critico: false },
+      { id: 'L8', item: 'Sem "onde" referindo-se a pessoas, entidades ou conceitos abstratos (não-lugar)', como_verificar: 'Substituir por "em que", "no qual", "na qual", "nos quais"', critico: false },
+      { id: 'L9', item: 'Sem redundâncias clássicas ("há anos atrás", "certeza absoluta", "breve resumo")', como_verificar: 'Verificar lista de redundâncias retornada pela ferramenta', critico: false },
+      { id: 'L10', item: 'Sem palavras repetidas em sequência ("que que", "de de", "a a")', como_verificar: 'Remover a repetição', critico: false },
+      { id: 'L11', item: 'Sem espaço duplo entre palavras', como_verificar: 'Substituir por espaço simples', critico: false },
+      { id: 'L12', item: 'Frases com no máximo 65 palavras', como_verificar: 'Dividir frases longas em duas ou três menores. Verificado automaticamente por revisao_linguagem(texto)', critico: false },
     ],
   },
   entrega: {
@@ -89,14 +95,31 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
     ],
   },
   modo_parecer: {
-    descricao: 'Verificação do modo de parecer (Geral ou Empresarial)',
+    descricao: 'Verificação do modo de parecer (Geral ou Empresarial) — Fase 1 obrigatória',
     itens: [
-      { id: 'M1', item: 'Modo confirmado com o usuário ANTES de iniciar o parecer (Compliance Geral ou Compliance Empresarial)', como_verificar: 'Verificar se houve confirmação explícita do usuário antes de começar a escrever o conteúdo', critico: true },
-      { id: 'M2', item: 'Modo Geral: todas as 9 seções completas com profundidade técnica (Cabeçalho, Questionamento, Interpretação Normativa, Implicações, Orientações, Vedações, Citações, Conclusão, Assinatura)', como_verificar: 'Verificar presença e extensão adequada de cada seção — N/A se modo=empresarial', critico: true },
-      { id: 'M3', item: 'Modo Empresarial: todas as 9 seções presentes mesmo que condensadas — nenhuma pode ser omitida', como_verificar: 'Verificar: Cabeçalho, A Situação, A Resposta, Implicações, O que fazer, Riscos, Base Legal, Conclusão, Assinatura — N/A se modo=geral', critico: true },
-      { id: 'M4', item: 'Modo Empresarial: linguagem acessível — sem jargão técnico não explicado (DAE, CST, CFOP, CFGE sem definição prévia)', como_verificar: 'Revisar se termos técnicos foram substituídos ou explicados — N/A se modo=geral', critico: true },
-      { id: 'M5', item: 'Modo Empresarial: máximo 5 páginas estimadas', como_verificar: 'Estimar pelo número de seções, tabelas e tamanho dos parágrafos — N/A se modo=geral', critico: false },
-      { id: 'M6', item: 'Título do documento correto: "PARECER TÉCNICO-TRIBUTÁRIO" (Geral) ou "NOTA TÉCNICA TRIBUTÁRIA" (Empresarial)', como_verificar: 'Verificar o add_run do título no script Python', critico: true },
+      { id: 'M1', item: 'Modo confirmado com o usuário ANTES de iniciar a elaboração — nunca assumir modo sem confirmar', como_verificar: 'Verificar se houve confirmação explícita do usuário antes de escrever qualquer linha de conteúdo', critico: true },
+      { id: 'M2', item: 'Modo Geral: extensão máxima de 5 páginas', como_verificar: 'Contar páginas do DOCX gerado ou estimar — N/A se modo=empresarial. Ao completar cada seção, estimar acumulado e ajustar profundidade das próximas.', critico: true },
+      { id: 'M3', item: 'Modo Empresarial: extensão máxima de 3 páginas', como_verificar: 'Contar páginas do DOCX gerado ou estimar — N/A se modo=geral. Cada seção deve caber em no máximo 4-6 linhas.', critico: true },
+      { id: 'M4', item: 'Modo Geral: 9 seções em extensão integral com profundidade técnica (Cabeçalho, Questionamento, Interpretação Normativa, Implicações, Orientações, Vedações, Citações, Conclusão, Assinatura)', como_verificar: 'Verificar presença e extensão adequada de cada seção — N/A se modo=empresarial', critico: true },
+      { id: 'M5', item: 'Modo Empresarial: 9 seções condensadas — nenhuma pode ser omitida', como_verificar: 'Verificar: Cabeçalho, A Situação, A Resposta, Implicações, O que fazer, Riscos, Base Legal, Conclusão, Assinatura — todas presentes mesmo que em 2-4 linhas — N/A se modo=geral', critico: true },
+      { id: 'M6', item: 'Modo Empresarial: linguagem acessível — termos técnicos definidos na mesma linha ("boleto" em vez de "DAE", "imposto" em vez de "tributo", "nota fiscal" em vez de "NF-e")', como_verificar: 'Revisar se siglas e jargões foram substituídos ou explicados — N/A se modo=geral', critico: true },
+      { id: 'M7', item: 'Título correto: "PARECER TÉCNICO-TRIBUTÁRIO" (Geral) ou "NOTA TÉCNICA TRIBUTÁRIA" (Empresarial)', como_verificar: 'Verificar o título no script Python e no DOCX gerado', critico: true },
+    ],
+  },
+  revalidacao_tecnica: {
+    descricao: 'Fase 7 — Revalidação Técnica Final (NOVO — OBRIGATÓRIO). Aplicar APÓS Checklist de Qualidade (Fase 6) e ANTES da geração do DOCX (Fase 8). Valida conteúdo jurídico, coerência lógica e aplicabilidade prática — complementa o Checklist de Qualidade, nenhuma das duas substitui a outra.',
+    itens: [
+      { id: 'RV1', item: 'Todas as perguntas da consulente foram respondidas de forma expressa', como_verificar: 'Comparar as perguntas do Questionamento (seção I) com as respostas da Conclusão (seção VII), uma a uma', critico: true },
+      { id: 'RV2', item: 'Nenhuma pergunta ficou parcialmente respondida', como_verificar: 'Cada conclusão numérica corresponde a uma pergunta do item I. Verificar se há perguntas sem resposta direta.', critico: true },
+      { id: 'RV3', item: 'Não existem conclusões sem fundamentação correspondente na seção II', como_verificar: 'Cada afirmação da Conclusão tem desenvolvimento anterior na Fundamentação. Nenhuma tese nova introduzida na Conclusão.', critico: true },
+      { id: 'RV4', item: 'Todos os artigos citados existem no texto legal e estão vigentes na data do parecer', como_verificar: 'Verificar cada dispositivo no texto legal (fetch URL ou consulta). Nenhum revogado citado como vigente sem indicar a norma revogadora.', critico: true },
+      { id: 'RV5', item: 'Sem conflito entre normas citadas sem justificativa de hierarquia', como_verificar: 'Norma superior prevalece; conflitos entre normas devem ser explicados com hierarquia (CF > LC > LO > Decreto > Ato normativo)', critico: true },
+      { id: 'RV6', item: 'A conclusão decorre diretamente da fundamentação — sem teses jurídicas novas na conclusão', como_verificar: 'Nenhum dispositivo legal deve aparecer pela primeira vez na Conclusão. Nenhum argumento novo introduzido após a Fundamentação.', critico: true },
+      { id: 'RV7', item: 'Coerência entre Relatório, Fundamentação e Conclusão', como_verificar: 'O objeto do Relatório é o mesmo analisado na Fundamentação e respondido na Conclusão. Sem desvio de objeto.', critico: true },
+      { id: 'RV8', item: 'O cliente sabe exatamente o que fazer após ler o parecer', como_verificar: 'Orientações operacionais claras, numeradas e executáveis presentes na seção IV. Verificar se a seção de orientações responde "o que fazer concretamente?"', critico: true },
+      { id: 'RV9', item: 'Riscos e limitações identificados com consequências práticas', como_verificar: 'Seção V (Vedações e Exceções) apresenta ao menos 3 vedações/riscos específicos com consequências práticas descritas', critico: true },
+      { id: 'RV10', item: 'Exemplos práticos: cálculos aritmeticamente corretos, alíquotas e datas do período de vigência normativa', como_verificar: 'Verificar cada cálculo manualmente. Confirmar vigência normativa dos valores usados. N/A se não há exemplos práticos.', critico: true },
+      { id: 'RV11', item: 'Sem exemplo que contradiga a fundamentação ou a conclusão', como_verificar: 'Resultado numérico do exemplo deve ser consistente com o posicionamento jurídico adotado. N/A se não há exemplos.', critico: true },
     ],
   },
   book_demonstracoes: {
@@ -127,6 +150,32 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'BD23', item: 'NOTA 19 — Eventos Subsequentes presente', como_verificar: 'Eventos entre 31/12/[ANO_ATUAL] e a data de autorização para emissão. Se não houver: declarar explicitamente.', critico: true },
       { id: 'BD24', item: 'Encerramento: local, data e assinaturas nas 3 demonstrações', como_verificar: 'Cada uma das 3 demonstrações tem rodapé "Fortaleza (CE), [data]" e bloco de assinaturas com dados da empresa.', critico: true },
     ],
+  },
+};
+
+const REVALIDACAO_TESTES = {
+  descricao: 'Fase 7 — Testes obrigatórios de Revalidação Técnica Final. Aplicar APÓS RV1-RV11 e ANTES de gerar o DOCX.',
+  teste_pergunta_unica: {
+    descricao: 'Teste da Pergunta Única — executar antes de avançar para Fase 8',
+    pergunta: 'Se o cliente ler APENAS a Conclusão do parecer, ele conseguirá entender a resposta final da consulta?',
+    resposta_esperada: 'SIM',
+    acao_se_nao: 'Retornar à Conclusão e reescrever para que seja autoexplicativa. A Conclusão deve ser compreensível sem leitura prévia da Fundamentação.',
+  },
+  teste_defesa_fiscal: {
+    descricao: 'Teste de Defesa Fiscal — critério final e mais exigente da revalidação',
+    pergunta: 'Se este parecer fosse apresentado amanhã para um Auditor da Receita Federal, Fiscal Estadual, Fiscal Municipal, membro do CARF ou Magistrado, a fundamentação suportaria a conclusão adotada?',
+    resposta_sim: 'Prosseguir para a Fase 8 (geração do DOCX)',
+    resposta_nao: 'Reabrir a Fundamentação antes de avançar. Verificar: norma citada sustenta a conclusão sem interpretação forçada? Existe precedente CARF contrário não abordado? A tese resiste à interpretação literal do fisco?',
+    obs: 'Quando NÃO, registrar expressamente na seção V (Vedações e Exceções) o risco identificado e as condições de contestação pelo fisco.',
+  },
+  nota_confiabilidade: {
+    descricao: 'Nota de Confiabilidade — uso interno, NÃO publicar no documento entregue ao cliente',
+    criterios: ['Base Legal (0-10)', 'Atualização Normativa (0-10)', 'Coerência Jurídica (0-10)', 'Aplicação Prática (0-10)', 'Clareza da Conclusão (0-10)'],
+    interpretacao: {
+      aprovado: '9,0 a 10,0 → APROVADO — prosseguir para Fase 8',
+      aprovado_com_ressalvas: '8,0 a 8,9 → APROVADO COM RESSALVAS — registrar limitação expressa na Conclusão do parecer',
+      reprovado: 'Abaixo de 8,0 → REPROVADO — retornar para revisão antes de avançar',
+    },
   },
 };
 
@@ -236,10 +285,10 @@ export function registerRevisaoTools(server: McpServer): void {
         'Usar categoria "modo_parecer" para verificar se o modo foi confirmado e seguido corretamente.',
       inputSchema: {
         categoria: z
-          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'modo_parecer', 'book_demonstracoes', 'todas'])
+          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'modo_parecer', 'revalidacao_tecnica', 'book_demonstracoes', 'todas'])
           .optional()
           .default('todas')
-          .describe('Categoria específica ou "todas" para checklist completo. Use "modo_parecer" para verificar Geral vs Empresarial. Use "book_demonstracoes" para validar o Book das Demonstrações Contábeis (pré-condição comparativa obrigatória + 19 notas).'),
+          .describe('Categoria específica ou "todas" para checklist completo. Use "modo_parecer" para verificar Geral vs Empresarial. Use "revalidacao_tecnica" para Fase 7 (RV1-RV11 + Teste da Pergunta Única + Teste de Defesa Fiscal + Nota de Confiabilidade) — obrigatório antes de gerar o DOCX. Use "book_demonstracoes" para validar o Book das Demonstrações Contábeis.'),
       },
     },
     async ({ categoria = 'todas' }) => {
@@ -256,6 +305,7 @@ export function registerRevisaoTools(server: McpServer): void {
           (acc, c) => acc + c.itens.filter((i) => i.critico).length, 0
         );
 
+        const incluirTestes = categoria === 'revalidacao_tecnica' || categoria === 'todas';
         return {
           content: [
             {
@@ -263,10 +313,11 @@ export function registerRevisaoTools(server: McpServer): void {
               text: JSON.stringify(
                 {
                   ok: true,
-                  instrucao: 'Verificar TODOS os itens críticos antes de entregar. Itens não-críticos são melhorias.',
+                  instrucao: 'Verificar TODOS os itens críticos antes de entregar. Itens não-críticos são melhorias recomendadas.',
                   total_itens,
                   total_criticos,
                   categorias: resultado,
+                  ...(incluirTestes ? { fase7_testes_obrigatorios: REVALIDACAO_TESTES } : {}),
                 },
                 null,
                 2,

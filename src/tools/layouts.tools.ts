@@ -28,10 +28,12 @@ const TEMPLATES_CATALOG = {
       'Pareceres emitidos sob a marca Guerra Advogados (clientes: Contabilizei, Fortes Tecnologia, Thompson/Domínio Sistemas, São Geraldo)',
     ja_formatado: true,
     pareceristas: [
-      'Fellipe Guerra — CRC 21.074',
-      'Marcos Lima — CRC 23.224',
-      'Mathaus Pordeus — OAB 52.206',
+      'Prof. Fellipe Guerra — Contador e Advogado Tributarista — CRC/CE nº 21.074 | OAB/CE nº 49.759',
+      'Prof. Marcos Lima — Contador e Cientista de Dados — CRC/CE nº 23.224',
+      'Prof. Mathaus Pordeus — Advogado Tributarista — OAB/CE nº 52.206',
     ],
+    assinatura_formato: 'É o parecer, s.m.j. | Fortaleza, [DATA POR EXTENSO]. | [Bloco de cada parecerista]',
+    assinatura_obs: 'Vedada qualquer alteração nos dados dos pareceristas. Não inserir assinaturas digitais, não alterar registros profissionais, não incluir outros profissionais além dos três listados.',
     email_templates: {
       perguntas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Perguntas.pdf',
       respostas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Resposta.pdf',
@@ -40,10 +42,12 @@ const TEMPLATES_CATALOG = {
   book_demonstracoes: {
     arquivo: 'EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',
     caminho: '00_Genesis/_layouts/EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',
+    caminho_windows: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\00_Genesis\\_layouts\\EMPRESA MODELO - BOOK DAS DEMONSTRAÇÕES CONTÁBEIS.docx',
     tipo: 'docx',
-    proposito: 'Book modelo de demonstrações contábeis',
-    quando_usar: 'Elaboração de BP, DRE, DLPA, DFC e notas explicativas',
+    proposito: 'Book modelo de demonstrações contábeis: BP Ativo, BP Passivo, DRE e 19 notas explicativas',
+    quando_usar: 'Elaboração de BP, DRE e notas explicativas para clientes com dois exercícios completos disponíveis',
     ja_formatado: true,
+    pre_condicao_obrigatoria: 'VERIFICAR ANTES DE INICIAR: o book exige dados comparativos de DOIS exercícios (ano atual e ano anterior). Se não houver dados do exercício anterior: NÃO executar. Solicitar os dados faltantes.',
   },
   tabela_simples_nacional: {
     arquivo: 'TABELA SIMPLES NACIONAL.xlsx',
@@ -112,28 +116,58 @@ const ESTRUTURA_PARECER = {
   ],
 };
 
+const DADOS_OBRIGATORIOS_PRE_PARECER = {
+  instrucao: 'BLOQUEANTE: coletar TODOS os dados abaixo antes de chamar qualquer ferramenta MCP. Se algum dado não for fornecido, interromper e solicitar ao usuário. Nunca assumir dados não informados.',
+  campos: [
+    { id: 1, campo: 'Razão social e CNPJ da consulente' },
+    { id: 2, campo: 'Nome do solicitante' },
+    { id: 3, campo: 'Data do questionamento' },
+    { id: 4, campo: 'Texto integral do questionamento (perguntas formuladas)' },
+    { id: 5, campo: 'Normas ou documentos mencionados pelo cliente (se houver)' },
+  ],
+};
+
+const FLUXO_9_FASES = {
+  descricao: 'Fluxo obrigatório e sequencial para elaboração de Parecer Técnico — Guerra Advogados (Diretrizes v3.0 jun/2026). Nenhuma fase pode ser omitida.',
+  fases: [
+    { numero: 1, titulo: 'Identificação e Seleção do Modo', tools: ['layout_estrutura_parecer(versao="guerra", modo=?)'], obs: 'Coletar DADOS_OBRIGATORIOS_PRE_PARECER antes de chamar a tool' },
+    { numero: 2, titulo: 'Pesquisa Legal (antes de escrever qualquer linha)', tools: ['fonte_lc214_mapa_temas', 'fonte_artigo_url', 'buscar_legisweb', 'buscar_carf', 'buscar_sijut', 'buscar_taxpratico', 'buscar_youtube(@ProfessorFellipeGuerra, @institutoect, @profpinzon, @contabilidadefacilitada)', 'revisao_normas_vigentes'] },
+    { numero: 3, titulo: 'Estrutura Metodológica', tools: ['alegacao_estrutura_resposta', 'alegacao_hierarquia_fontes', 'alegacao_cronograma_transicao (se tema envolve transição)', 'alegacao_glossario', 'alegacao_boas_praticas'] },
+    { numero: 4, titulo: 'Elaboração do Conteúdo (9 seções)', obs: 'Claude elabora com base nas fases 2 e 3. Aplicar restrições do modo selecionado seção por seção.' },
+    { numero: 5, titulo: 'Revisão de Linguagem', tools: ['revisao_linguagem(texto_completo)'], obs: 'Status APROVADO = zero violações críticas. Status REPROVADO = corrigir TODAS as críticas antes de prosseguir.' },
+    { numero: 6, titulo: 'Checklist de Qualidade', tools: ['revisao_checklist_parecer(categoria="todas")', 'revisao_normas_vigentes(grupo="todos")'], obs: 'Todos os itens críticos devem estar APROVADOS antes de avançar.' },
+    { numero: 7, titulo: 'Revalidação Técnica Final (NOVO — OBRIGATÓRIO)', tools: ['revisao_checklist_parecer(categoria="revalidacao_tecnica")'], obs: 'Valida conteúdo jurídico, coerência e aplicabilidade. Complementa Fase 6 — nenhuma substitui a outra. Nota de Confiabilidade mínima 8,0.' },
+    { numero: 8, titulo: 'Geração do DOCX', obs: 'Somente após aprovação na Fase 7. Script Python com python-docx a partir do template Guerra. Preservar script ao lado do DOCX.' },
+    { numero: 9, titulo: 'Entrega', obs: 'Salvar na pasta do cliente → Renomear [RESPONDER] para [ENTREGUE] → gmail_criar_rascunho com DOCX anexo.' },
+  ],
+};
+
 const PERGUNTA_MODO = {
-  instrucao: 'OBRIGATÓRIO: antes de iniciar qualquer parecer, perguntar ao usuário qual modo usar.',
-  pergunta: 'Vamos usar Compliance Geral (parecer técnico completo, base legal detalhada) ou Compliance Empresarial (nota resumida, máx. 3-5 páginas, linguagem direta para o empresário)?',
+  instrucao: 'OBRIGATÓRIO: antes de iniciar qualquer parecer, confirmar com o usuário qual modo usar. A seleção define profundidade técnica, título e extensão máxima.',
+  pergunta: 'Qual modo utilizar: Compliance Geral (parecer técnico completo, base legal detalhada, máx. 5 páginas) ou Compliance Empresarial (nota resumida, máx. 3 páginas, linguagem direta para o empresário)?',
   opcoes: {
     geral: {
       label: 'Compliance Geral',
-      descricao: 'Parecer técnico completo com todas as 9 seções, base legal explícita, linguagem técnica formal',
-      quando_usar: 'Defesa fiscal, arquivamento permanente, terceiros técnicos (advogados, auditores, SEFAZ)',
       titulo_documento: 'PARECER TÉCNICO-TRIBUTÁRIO',
+      paginas_max: 5,
+      descricao: 'Parecer técnico completo com todas as 9 seções em extensão integral, base legal explícita artigo por artigo, linguagem técnica formal',
+      quando_usar: 'Defesa fiscal, arquivamento permanente, terceiros técnicos (advogados, auditores, SEFAZ, CARF)',
+      restricoes: ['Máximo 5 páginas — inegociável', '9 seções obrigatórias em extensão integral', 'Base legal: citar artigo, §, inciso, alínea em cada afirmação', 'Uma ideia por parágrafo, máx. 4 parágrafos por subseção'],
     },
     empresarial: {
       label: 'Compliance Empresarial',
-      descricao: 'Nota técnica condensada, máx. 3-5 páginas, linguagem acessível ao empresário, resposta direta',
-      quando_usar: 'Decisão operacional rápida, comunicação ao cliente empresário, gestor não especialista',
       titulo_documento: 'NOTA TÉCNICA TRIBUTÁRIA',
+      paginas_max: 3,
+      descricao: 'Nota técnica condensada, máx. 3 páginas, linguagem acessível ao empresário, resposta direta ao ponto',
+      quando_usar: 'Decisão operacional rápida, comunicação ao cliente empresário, gestor não especialista',
+      restricoes: ['Máximo 3 páginas — inegociável', '9 seções obrigatórias, mas condensadas ao essencial (nunca omitidas)', 'Base legal apenas na tabela da seção 7 — NÃO citar artigos no corpo do texto', 'Terminologia simples: "boleto" em vez de "DAE", "imposto" em vez de "tributo", "nota fiscal" em vez de "NF-e"'],
     },
   },
 };
 
 const ESTRUTURA_PARECER_EMPRESARIAL = {
   titulo_documento: 'NOTA TÉCNICA TRIBUTÁRIA',
-  paginas_max: 5,
+  paginas_max: 3,
   linguagem: 'Direta e acessível ao empresário. Sem jargão técnico excessivo. Frases curtas. Respostas diretas. Usar "boleto" em vez de "DAE", "imposto" em vez de "tributo", "nota fiscal" em vez de "NF-e".',
   secoes: [
     { numero: 1, titulo: 'Cabeçalho', conteudo: 'Empresa (razão social e CNPJ), solicitante, responsável técnico, data e assunto resumido', condensado: 'Tabela compacta — máx. 5 linhas' },
@@ -165,7 +199,8 @@ const REGRAS_DOCX = {
     regra: 'Parágrafos separados pelo space_after (6pt). Não usar linha em branco entre parágrafos normais. Seções e subtítulos podem ter space_before maior (8-12pt).',
     implementacao: 'pf.line_spacing = 1.5 | pf.space_before = Pt(0) | pf.space_after = Pt(6)',
   },
-  cores_permitidas: ['preto #000000', 'branco #FFFFFF', 'cinza escuro #808080', 'cinza claro #D3D3D3', 'cinza muito claro #F0F0F0'],
+  cor_texto_principal: '#1A1A1A (Guerra dark) — NÃO usar preto puro #000000',
+  cores_permitidas: ['cinza escuro (texto) #1A1A1A', 'branco #FFFFFF', 'cinza bordas #808080', 'cinza header tabela #C8C8C8', 'cinza zebra #F0F0F0'],
   cores_proibidas: [
     'azul (qualquer tom)',
     'vermelho (qualquer tom)',
@@ -342,6 +377,131 @@ const CHECKLIST_XLSX = [
   'Destaques em amarelo (não vermelho/verde)?',
 ];
 
+const ESTRUTURA_BOOK_DEMONSTRACOES = {
+  regra_comparativo: {
+    obrigatorio: true,
+    bloqueante: true,
+    descricao: 'O book DEVE apresentar dados de DOIS exercícios: ANO_ATUAL e ANO_ANTERIOR (comparativo obrigatório). Sem os dois conjuntos de dados: NÃO executar.',
+    formato_periodo: 'Para os Exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]',
+    formato_colunas: 'Descrição | [ANO_ATUAL] | [ANO_ANTERIOR]',
+    acao_sem_comparativo: 'Interromper e solicitar ao usuário os dados do exercício anterior antes de prosseguir.',
+  },
+  capa: {
+    obrigatorio: true,
+    campos: [
+      'Razão social da empresa',
+      'CNPJ',
+      'Cidade/UF',
+      'Título: "Demonstrações Financeiras"',
+      'Período: "Exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]"',
+    ],
+  },
+  demonstracoes: [
+    {
+      id: 'BP_ATIVO',
+      titulo: 'BALANÇO PATRIMONIAL — ATIVO',
+      obrigatorio: true,
+      cabecalho: 'Para os Exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]\n(Valores expressos em Reais)',
+      estrutura_tabela: '3 colunas: Descrição | [ANO_ATUAL] | [ANO_ANTERIOR]',
+      rodape: 'As notas explicativas são parte integrante das demonstrações financeiras.',
+      assinaturas: 'Local, data, Sócio-Administrador + dados da empresa',
+    },
+    {
+      id: 'BP_PASSIVO',
+      titulo: 'BALANÇO PATRIMONIAL — PASSIVO',
+      obrigatorio: true,
+      cabecalho: 'Para os Exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]\n(Valores expressos em Reais)',
+      estrutura_tabela: '3 colunas: Descrição | [ANO_ATUAL] | [ANO_ANTERIOR]',
+      rodape: 'As notas explicativas são parte integrante das demonstrações financeiras.',
+      assinaturas: 'Local, data, Sócio-Administrador + dados da empresa',
+    },
+    {
+      id: 'DRE',
+      titulo: 'DEMONSTRAÇÃO DO RESULTADO DO EXERCÍCIO',
+      obrigatorio: true,
+      cabecalho: 'Para os Exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]\n(Valores expressos em Reais)',
+      estrutura_tabela: '3 colunas: Descrição | [ANO_ATUAL] | [ANO_ANTERIOR]',
+      rodape: 'As notas explicativas são parte integrante das demonstrações financeiras.',
+      assinaturas: 'Local, data, Sócio-Administrador + dados da empresa',
+    },
+  ],
+  notas_explicativas: {
+    cabecalho_pagina: [
+      'Razão social + "NOTAS EXPLICATIVAS ÀS DEMONSTRAÇÕES FINANCEIRAS"',
+      'Para os exercícios findos em 31 de dezembro de [ANO_ATUAL] e [ANO_ANTERIOR]',
+      '(Valores expressos em Reais, exceto quando indicado de outra forma)',
+    ],
+    notas: [
+      {
+        numero: 1,
+        titulo: 'CONTEXTO OPERACIONAL',
+        obrigatorio: true,
+        tem_tabela: false,
+        conteudo: 'Qualificação jurídica: CNPJ, tipo societário, sede. Principais atividades (serviços, locação, produção).',
+      },
+      {
+        numero: 2,
+        titulo: 'BASE DE PREPARAÇÃO E DECLARAÇÃO DE CONFORMIDADE',
+        obrigatorio: true,
+        tem_tabela: false,
+        conteudo: 'Práticas contábeis adotadas no Brasil, CPCs e NBCs aplicáveis. Se o Balancete de [ANO_ATUAL] for provisório: informar explicitamente e mencionar o ajuste de equalização.',
+      },
+      {
+        numero: 3,
+        titulo: 'PRINCIPAIS POLÍTICAS CONTÁBEIS',
+        obrigatorio: true,
+        tem_tabela: false,
+        subitens: [
+          { id: '3.1', titulo: 'Regime de Competência', norma: 'CPC 26 (R1), item 27' },
+          { id: '3.2', titulo: 'Caixa e Equivalentes de Caixa', norma: 'CPC 03 (R2) — prazo de resgate até 90 dias' },
+          { id: '3.3', titulo: 'Contas a Receber de Clientes', norma: 'Valor original deduzido de provisão para perdas esperadas quando aplicável' },
+          { id: '3.4', titulo: 'Estoques', norma: 'CPC 16 (R1) — custo médio de aquisição/produção, não superior ao VLR' },
+          { id: '3.5', titulo: 'Ativo Imobilizado', norma: 'CPC 27 — custo de aquisição menos depreciação acumulada, método linear. Revisão anual de valor recuperável.' },
+          { id: '3.6', titulo: 'Fornecedores e Obrigações', norma: 'Valores das obrigações assumidas, sem encargos financeiros exceto quando pactuado' },
+          { id: '3.7', titulo: 'Receitas', norma: 'CPC 47 — serviços: quando o controle é transferido ao cliente; locação: linearmente ao longo do período' },
+        ],
+      },
+      { numero: 4, titulo: 'CAIXA E EQUIVALENTES DE CAIXA', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Numerários em espécie, depósitos bancários à vista e aplicações financeiras de alta liquidez com prazo até 90 dias.' },
+      { numero: 5, titulo: 'CLIENTES — CONTAS A RECEBER', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Composição do saldo. Análise de variação. Política de provisão para perdas esperadas.' },
+      { numero: 6, titulo: 'CRÉDITOS — IMPOSTOS A RECUPERAR E ADIANTAMENTOS', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'ICMS, PIS e COFINS a recuperar. Adiantamentos a fornecedores ou empregados. Variação explicada.' },
+      { numero: 7, titulo: 'ESTOQUES', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Composição por tipo de estoque. Método de avaliação declarado (custo médio). Variação explicada.' },
+      { numero: 8, titulo: 'ATIVO NÃO CIRCULANTE', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Créditos com sócios, depósitos judiciais, outros realizáveis de longo prazo. Condições e encargos.' },
+      { numero: 9, titulo: 'IMOBILIZADO — MOVIMENTAÇÃO DO EXERCÍCIO', obrigatorio: true, tem_tabela: true, colunas_tabela: 'Grupo de bens | Saldo inicial | Adições | Baixas | Depreciação | Saldo final', conteudo: 'Movimentação por grupo de bens (equipamentos, veículos, instalações). Taxa de depreciação declarada.' },
+      { numero: 10, titulo: 'FORNECEDORES', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Obrigações por aquisição de insumos, materiais, mercadorias e serviços operacionais. Prazo e encargos.' },
+      { numero: 11, titulo: 'OBRIGAÇÕES TRIBUTÁRIAS', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Composição por tributo (ICMS, PIS, COFINS, INSS, IRRF, outros). Saldo devedor ou credor explicado.' },
+      {
+        numero: 12,
+        titulo: 'PATRIMÔNIO LÍQUIDO',
+        obrigatorio: true,
+        tem_tabela: true,
+        colunas_tabela: 3,
+        subitens: [
+          { id: '12.1', titulo: 'Capital Social', conteudo: 'Valor total, totalmente subscrito e integralizado, composição de quotas/ações.' },
+          { id: '12.2', titulo: 'Lucros ou Prejuízos Acumulados', conteudo: 'Saldo do período, variação em relação ao exercício anterior, destinação.' },
+          { id: '12.3', titulo: 'Ponto de Atenção — Movimentação Analítica', conteudo: 'Ajustes de exercícios anteriores, ajustes de equalização (balancete provisório), variações relevantes com justificativa detalhada.' },
+        ],
+      },
+      { numero: 13, titulo: 'RECEITA BRUTA E DEDUÇÕES', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Composição da receita bruta por atividade (serviços, locação, venda de produtos). Deduções: impostos sobre vendas, devoluções, abatimentos.' },
+      { numero: 14, titulo: 'CUSTO DOS SERVIÇOS E PRODUTOS VENDIDOS', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Insumos, materiais, mão de obra direta e demais gastos operacionais de produção e prestação de serviços.' },
+      { numero: 15, titulo: 'DESPESAS OPERACIONAIS', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Despesas administrativas: pessoal, serviços de terceiros, aluguéis, outras despesas gerais. Variação explicada.' },
+      { numero: 16, titulo: 'RESULTADO DO EXERCÍCIO — ANÁLISE COMPARATIVA', obrigatorio: true, tem_tabela: true, colunas_tabela: 3, conteudo: 'Síntese: lucro ou prejuízo do exercício. Variação em relação ao exercício anterior com análise das principais causas.' },
+      { numero: 17, titulo: 'PARTES RELACIONADAS', obrigatorio: true, tem_tabela: false, conteudo: 'Transações com sócios, administradores e empresas do grupo. Natureza, valores e condições. Se não houver: declarar explicitamente.' },
+      { numero: 18, titulo: 'PASSIVOS CONTINGENTES', obrigatorio: true, tem_tabela: false, conteudo: 'Avaliação de passivos prováveis, possíveis e remotos (trabalhistas, fiscais, cíveis). Se não houver: declarar explicitamente.' },
+      { numero: 19, titulo: 'EVENTOS SUBSEQUENTES', obrigatorio: true, tem_tabela: false, conteudo: 'Eventos relevantes ocorridos entre 31/12/[ANO_ATUAL] e a data de autorização para emissão das demonstrações. Se não houver: declarar explicitamente.' },
+    ],
+    encerramento: 'Local, data e assinaturas dos responsáveis técnicos',
+  },
+  instrucoes_gerais: [
+    'PRÉ-CONDIÇÃO BLOQUEANTE: verificar ANTES de iniciar se há dados dos dois exercícios (ANO_ATUAL e ANO_ANTERIOR). Sem comparativo: NÃO executar.',
+    'Todas as tabelas de notas: 3 colunas (Descrição, ANO_ATUAL, ANO_ANTERIOR), exceto Nota 9 (movimentação do imobilizado).',
+    'Todas as 19 notas são obrigatórias. Adaptar o conteúdo à realidade da empresa — não suprimir notas.',
+    'Conta com saldo zero: registrar R$ 0,00 e explicar na nota correspondente (ex.: sem estoques em 2024).',
+    'Copiar o template para a pasta do projeto antes de editar — NUNCA editar o arquivo original.',
+    'Normas aplicáveis: CPC 26 (R1), CPC 27, CPC 16 (R1), CPC 03 (R2), CPC 47 e NBC TGs correlatas.',
+    'Usar revisao_checklist_parecer(categoria: "book_demonstracoes") antes de entregar.',
+  ],
+};
+
 export function registerLayoutTools(server: McpServer): void {
   server.registerTool(
     'layouts_listar',
@@ -433,22 +593,24 @@ export function registerLayoutTools(server: McpServer): void {
       };
       const chave = mapa[versao ?? 'padrao'] ?? 'parecer_padrao';
       const estrutura = modo === 'empresarial' ? ESTRUTURA_PARECER_EMPRESARIAL : null;
+      const modoConfig = modo === 'empresarial' ? PERGUNTA_MODO.opcoes.empresarial : PERGUNTA_MODO.opcoes.geral;
       return {
         content: [
           {
             type: 'text',
             text: JSON.stringify(
               {
+                fase_1_dados_obrigatorios: DADOS_OBRIGATORIOS_PRE_PARECER,
                 pergunta_inicial: PERGUNTA_MODO,
                 modo_selecionado: modo ?? 'geral',
+                titulo_documento: modoConfig.titulo_documento,
+                paginas_max: modoConfig.paginas_max,
+                restricoes_ativas: modoConfig.restricoes,
                 template_a_usar: TEMPLATES_CATALOG[chave],
+                fluxo_9_fases: FLUXO_9_FASES,
                 estrutura_9_secoes: estrutura ? estrutura.secoes : ESTRUTURA_PARECER.secoes,
                 instrucoes_gerais: estrutura ? estrutura.instrucoes_gerais : ESTRUTURA_PARECER.instrucoes_gerais,
-                ...(estrutura ? {
-                  titulo_documento: estrutura.titulo_documento,
-                  paginas_max: estrutura.paginas_max,
-                  linguagem: estrutura.linguagem,
-                } : {}),
+                ...(estrutura ? { linguagem: estrutura.linguagem } : {}),
                 versao_solicitada: versao,
               },
               null,
@@ -458,6 +620,33 @@ export function registerLayoutTools(server: McpServer): void {
         ],
       };
     },
+  );
+
+  server.registerTool(
+    'layout_estrutura_book',
+    {
+      description:
+        'Estrutura completa do Book das Demonstrações Contábeis (BP Ativo, BP Passivo, DRE e 19 notas). ' +
+        'ATENÇÃO: verificar ANTES de iniciar se há dados de DOIS exercícios (ano atual E ano anterior). ' +
+        'Sem dados comparativos do ano anterior = NÃO executar o book. ' +
+        'Retorna pré-condições, estrutura das 3 demonstrações e das 19 notas explicativas obrigatórias.',
+      inputSchema: {},
+    },
+    async () => ({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(
+            {
+              template: TEMPLATES_CATALOG.book_demonstracoes,
+              estrutura: ESTRUTURA_BOOK_DEMONSTRACOES,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    }),
   );
 
   server.registerTool(
