@@ -99,6 +99,35 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'M6', item: 'Título do documento correto: "PARECER TÉCNICO-TRIBUTÁRIO" (Geral) ou "NOTA TÉCNICA TRIBUTÁRIA" (Empresarial)', como_verificar: 'Verificar o add_run do título no script Python', critico: true },
     ],
   },
+  book_demonstracoes: {
+    descricao: 'Validação do Book das Demonstrações Contábeis — pré-condições, demonstrações e 19 notas',
+    itens: [
+      { id: 'BD1', item: 'PRÉ-CONDIÇÃO BLOQUEANTE: dados de DOIS exercícios presentes (ANO_ATUAL e ANO_ANTERIOR)', como_verificar: 'Confirmar se o usuário forneceu valores dos dois exercícios. Se não houver dados do exercício anterior: REPROVAR e NÃO executar o book. Solicitar os dados faltantes.', critico: true },
+      { id: 'BD2', item: 'BALANÇO PATRIMONIAL — ATIVO: tabela comparativa 3 colunas', como_verificar: 'Colunas: Descrição, ANO_ATUAL, ANO_ANTERIOR. Cabeçalho com período duplo. Rodapé: "notas explicativas são parte integrante". Assinaturas.', critico: true },
+      { id: 'BD3', item: 'BALANÇO PATRIMONIAL — PASSIVO: tabela comparativa 3 colunas', como_verificar: 'Colunas: Descrição, ANO_ATUAL, ANO_ANTERIOR. Cabeçalho com período duplo. Rodapé: "notas explicativas são parte integrante". Assinaturas.', critico: true },
+      { id: 'BD4', item: 'DEMONSTRAÇÃO DO RESULTADO DO EXERCÍCIO: tabela comparativa 3 colunas', como_verificar: 'Colunas: Descrição, ANO_ATUAL, ANO_ANTERIOR. Cabeçalho com período duplo. Rodapé: "notas explicativas são parte integrante". Assinaturas.', critico: true },
+      { id: 'BD5', item: 'NOTA 1 — Contexto Operacional presente', como_verificar: 'CNPJ, tipo societário, sede e principais atividades da empresa descritos.', critico: true },
+      { id: 'BD6', item: 'NOTA 2 — Base de Preparação e Declaração de Conformidade presente', como_verificar: 'Menção a CPCs e NBCs aplicáveis. Se Balancete provisório: informar explicitamente e mencionar ajuste de equalização.', critico: true },
+      { id: 'BD7', item: 'NOTA 3 — Principais Políticas Contábeis com os 7 subitens (3.1 a 3.7)', como_verificar: '3.1 Regime de Competência (CPC 26), 3.2 Caixa (CPC 03), 3.3 Recebíveis, 3.4 Estoques (CPC 16), 3.5 Imobilizado (CPC 27), 3.6 Fornecedores, 3.7 Receitas (CPC 47). Todos presentes.', critico: true },
+      { id: 'BD8', item: 'NOTA 4 — Caixa e Equivalentes de Caixa: tabela comparativa', como_verificar: 'Tabela 3 colunas. Composição explicada (numerário, depósitos, aplicações até 90 dias).', critico: true },
+      { id: 'BD9', item: 'NOTA 5 — Clientes / Contas a Receber: tabela comparativa', como_verificar: 'Tabela 3 colunas. Análise de variação entre exercícios presente.', critico: true },
+      { id: 'BD10', item: 'NOTA 6 — Créditos / Impostos a Recuperar: tabela comparativa', como_verificar: 'Tabela 3 colunas. Composição por tributo (ICMS, PIS, COFINS) e adiantamentos.', critico: true },
+      { id: 'BD11', item: 'NOTA 7 — Estoques: tabela comparativa', como_verificar: 'Tabela 3 colunas. Método de avaliação (custo médio) declarado. Se saldo zero em algum exercício: explicar.', critico: true },
+      { id: 'BD12', item: 'NOTA 8 — Ativo Não Circulante: tabela comparativa', como_verificar: 'Tabela 3 colunas. Créditos com sócios e outros itens de longo prazo identificados com condições.', critico: true },
+      { id: 'BD13', item: 'NOTA 9 — Imobilizado: tabela de movimentação do exercício', como_verificar: 'Colunas: Grupo de bens, Saldo inicial, Adições, Baixas, Depreciação, Saldo final. Taxa de depreciação declarada por grupo.', critico: true },
+      { id: 'BD14', item: 'NOTA 10 — Fornecedores: tabela comparativa', como_verificar: 'Tabela 3 colunas. Natureza das obrigações e encargos.', critico: true },
+      { id: 'BD15', item: 'NOTA 11 — Obrigações Tributárias: tabela comparativa', como_verificar: 'Tabela 3 colunas. Composição por tributo. Saldo devedor ou credor explicado.', critico: true },
+      { id: 'BD16', item: 'NOTA 12 — Patrimônio Líquido: tabela comparativa com subitens 12.1, 12.2 e 12.3', como_verificar: 'Tabela 3 colunas. Subitens: 12.1 Capital Social, 12.2 Lucros/Prejuízos Acumulados, 12.3 Movimentação Analítica (ajustes de exercícios anteriores e equalizações detalhados).', critico: true },
+      { id: 'BD17', item: 'NOTA 13 — Receita Bruta e Deduções: tabela comparativa', como_verificar: 'Tabela 3 colunas. Segregação por atividade (serviços, locação, produtos). Deduções discriminadas.', critico: true },
+      { id: 'BD18', item: 'NOTA 14 — Custo dos Serviços e Produtos Vendidos: tabela comparativa', como_verificar: 'Tabela 3 colunas. Composição dos custos por categoria.', critico: true },
+      { id: 'BD19', item: 'NOTA 15 — Despesas Operacionais: tabela comparativa', como_verificar: 'Tabela 3 colunas. Principais categorias (pessoal, terceiros, aluguéis, outras). Variação explicada.', critico: true },
+      { id: 'BD20', item: 'NOTA 16 — Resultado do Exercício / Análise Comparativa: tabela presente', como_verificar: 'Tabela comparativa. Análise da variação lucro/prejuízo com justificativa das principais causas.', critico: true },
+      { id: 'BD21', item: 'NOTA 17 — Partes Relacionadas presente', como_verificar: 'Identificar transações com sócios/administradores/grupo. Se não houver: declarar ausência explicitamente.', critico: true },
+      { id: 'BD22', item: 'NOTA 18 — Passivos Contingentes presente', como_verificar: 'Avaliar prováveis, possíveis e remotos. Se não houver: declarar explicitamente que nenhum foi identificado.', critico: true },
+      { id: 'BD23', item: 'NOTA 19 — Eventos Subsequentes presente', como_verificar: 'Eventos entre 31/12/[ANO_ATUAL] e a data de autorização para emissão. Se não houver: declarar explicitamente.', critico: true },
+      { id: 'BD24', item: 'Encerramento: local, data e assinaturas nas 3 demonstrações', como_verificar: 'Cada uma das 3 demonstrações tem rodapé "Fortaleza (CE), [data]" e bloco de assinaturas com dados da empresa.', critico: true },
+    ],
+  },
 };
 
 const NORMAS_VIGENTES = {
@@ -164,6 +193,32 @@ const PALAVRAS_PROIBIDAS: Array<{ palavra: string; substituto: string }> = [
   { palavra: 'verifica-se que', substituto: 'afirmação direta (remover a introdução)' },
   { palavra: 'nota-se que', substituto: 'afirmação direta' },
   { palavra: 'observa-se que', substituto: 'afirmação direta' },
+  // Verbosidade e connectives desnecessários
+  { palavra: 'de forma a', substituto: '"para" (mais direto)' },
+  { palavra: 'no sentido de', substituto: '"para" / "a fim de"' },
+  { palavra: 'com relação a', substituto: '"sobre" / "quanto a"' },
+  { palavra: 'em relação a', substituto: '"sobre" / "quanto a"' },
+  { palavra: 'haja vista que', substituto: '"visto que" / "considerando que"' },
+  { palavra: 'haja vista', substituto: '"visto que" / "diante de"' },
+  { palavra: 'no bojo de', substituto: '"no âmbito de" / "no contexto de"' },
+  { palavra: 'no âmbito do presente', substituto: '"neste contrato" / "neste parecer" (mais direto)' },
+  { palavra: 'para todos os efeitos legais', substituto: 'Evitar — já subentendido em texto técnico' },
+  { palavra: 'conclui-se, portanto, que', substituto: '"conclui-se que" ("portanto" é redundante)' },
+  // Latinismos desnecessários
+  { palavra: 'pari passu', substituto: '"simultaneamente" / "em paralelo"' },
+  { palavra: 'mutatis mutandis', substituto: '"com as devidas adaptações"' },
+  { palavra: 'ipso facto', substituto: '"por isso mesmo" / "consequentemente"' },
+  { palavra: 'data venia', substituto: '"com a devida vênia" (se necessário manter o registro) ou suprimir' },
+  // Jargão corporativo IA
+  { palavra: 'alavancar', substituto: '"aumentar" / "ampliar" / "impulsionar"' },
+  { palavra: 'nortear', substituto: '"orientar" / "guiar" / "direcionar"' },
+  { palavra: 'balizar', substituto: '"delimitar" / "orientar" / "estabelecer parâmetros"' },
+  { palavra: 'permear', substituto: '"atravessar" / "influenciar" / "estar presente em"' },
+  { palavra: 'expertise', substituto: '"conhecimento técnico" / "especialização" / "competência"' },
+  { palavra: 'demandar', substituto: '"exigir" / "requerer" (demandar = acionar judicialmente em pt-BR formal)' },
+  { palavra: 'robusto', substituto: '"sólido" / "consistente" / "abrangente"' },
+  { palavra: 'sinalizar', substituto: '"indicar" / "apontar" / "demonstrar"' },
+  { palavra: 'pari passu', substituto: '"simultaneamente" / "em paralelo"' },
 ];
 
 // ─── TOOLS ────────────────────────────────────────────────────────────────────
@@ -181,10 +236,10 @@ export function registerRevisaoTools(server: McpServer): void {
         'Usar categoria "modo_parecer" para verificar se o modo foi confirmado e seguido corretamente.',
       inputSchema: {
         categoria: z
-          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'modo_parecer', 'todas'])
+          .enum(['template', 'formatacao', 'estrutura', 'base_legal_ibs_cbs', 'linguagem', 'entrega', 'modo_parecer', 'book_demonstracoes', 'todas'])
           .optional()
           .default('todas')
-          .describe('Categoria específica ou "todas" para checklist completo. Use "modo_parecer" para verificar Geral vs Empresarial.'),
+          .describe('Categoria específica ou "todas" para checklist completo. Use "modo_parecer" para verificar Geral vs Empresarial. Use "book_demonstracoes" para validar o Book das Demonstrações Contábeis (pré-condição comparativa obrigatória + 19 notas).'),
       },
     },
     async ({ categoria = 'todas' }) => {
@@ -277,8 +332,11 @@ export function registerRevisaoTools(server: McpServer): void {
     'revisao_linguagem',
     {
       description:
-        'Analisa um texto e aponta violações das regras de linguagem do workspace: ' +
-        'travessões proibidos, palavras-IA proibidas, setas fora de lançamentos. ' +
+        'Analisa um texto e aponta violações das regras de linguagem do workspace. ' +
+        'Verifica: travessões proibidos, palavras-IA proibidas, setas fora de lançamentos, ' +
+        'gerundismo, "através de" inadequado, "a nível de" incorreto, ' +
+        'colocação pronominal, uso indevido de "onde", redundâncias clássicas, ' +
+        'palavras repetidas em sequência, espaços duplos e frases longas (> 65 palavras). ' +
         'Retorna cada ocorrência com contexto e substituto recomendado. ' +
         'Usar no texto completo do parecer antes de gerar o DOCX final.',
       inputSchema: {
@@ -343,8 +401,170 @@ export function registerRevisaoTools(server: McpServer): void {
           });
         }
 
+        // 4. Gerundismo — construção verbal proibida em escrita técnica formal
+        const gerundismoRegex = /\b(estar[aáão]|estamos|estar[ei]mos|ir[aá]|iremos|v[aã]o\s+estar|podemos?\s+estar)\s+\w+ndo\b/gi;
+        while ((m = gerundismoRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 60);
+          const fim = Math.min(texto.length, m.index + 60);
+          violacoes.push({
+            tipo: 'GERUNDISMO',
+            ocorrencia: m[0],
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: 'Substituir por forma verbal direta: "analisaremos", "será enviado", "procederemos a"',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 5. "Através de" — uso inadequado em escrita formal (correto apenas para sentido físico de travessia)
+        const atravesRegex = /\batravés\s+de\b/gi;
+        while ((m = atravesRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 60);
+          const fim = Math.min(texto.length, m.index + 60);
+          violacoes.push({
+            tipo: 'REGÊNCIA INADEQUADA',
+            ocorrencia: m[0],
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: '"por meio de" (instrumento/método) ou "mediante" (formalidade)',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 6. "A nível de" — incorreto gramaticalmente; correto é "no nível de" ou "no âmbito de"
+        const aNivelRegex = /\ba\s+n[ií]vel\s+de\b/gi;
+        while ((m = aNivelRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 60);
+          const fim = Math.min(texto.length, m.index + 60);
+          violacoes.push({
+            tipo: 'ERRO GRAMATICAL',
+            ocorrencia: m[0],
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: '"no âmbito de" / "no nível de" / "em termos de"',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 7. Pronome oblíquo no início de frase — erro de colocação pronominal
+        const pronomeFrasalRegex = /(?:^|\.\s+|\n\s*)([Mm]e\s|[Ll]he\s|[Ll]hes\s|[Nn]os\s(?!termos|casos|artigos|incisos|parágrafos)|[Tt]e\s)/gm;
+        while ((m = pronomeFrasalRegex.exec(texto)) !== null) {
+          const pronome = m[1];
+          const inicio = Math.max(0, m.index - 20);
+          const fim = Math.min(texto.length, m.index + 80);
+          violacoes.push({
+            tipo: 'COLOCAÇÃO PRONOMINAL',
+            ocorrencia: pronome.trim(),
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: 'Pronome oblíquo não inicia frase. Reorganizar: "Cabe-nos", "Foi-lhe informado", ou usar sujeito explícito',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 8. "Onde" referindo-se a pessoas ou conceitos abstratos (não-lugar)
+        const ondeAbstratoRegex = /\b(contribuinte|empresa|sociedade|cliente|autor|réu|parte|contratante|contratada|pessoa|profissional|advogado|contador)\b[^.]{0,60}\bonde\b/gi;
+        while ((m = ondeAbstratoRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 20);
+          const fim = Math.min(texto.length, m.index + 100);
+          violacoes.push({
+            tipo: 'USO INDEVIDO DE "ONDE"',
+            ocorrencia: 'onde',
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: '"onde" é relativo de lugar. Usar "em que", "no qual", "na qual", "nos quais"',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 9. Redundâncias clássicas
+        const REDUNDANCIAS: Array<{ expr: string; substituto: string }> = [
+          { expr: 'h[aá] anos? atr[aá]s', substituto: '"há anos" ou "anos atrás" (não ambos)' },
+          { expr: 'subir para cima', substituto: '"subir" (cima é implícito)' },
+          { expr: 'descer para baixo', substituto: '"descer" (baixo é implícito)' },
+          { expr: 'elo de ligação', substituto: '"elo" ou "vínculo" (ligação é redundante)' },
+          { expr: 'juntamente com', substituto: '"com" ou "junto a"' },
+          { expr: 'breve resumo', substituto: '"resumo" (todo resumo é breve)' },
+          { expr: 'a(?:o)? meu ver', substituto: '"a meu ver" está correto; se "ao meu ver", corrigir para "a meu ver"' },
+          { expr: 'ao meu ver', substituto: 'Incorreto. Usar "a meu ver" ou "em minha opinião"' },
+          { expr: 'enquanto que', substituto: '"enquanto" (o "que" é redundante)' },
+          { expr: 'mas porém', substituto: '"mas" ou "porém" (não ambos)' },
+          { expr: 'certeza absoluta', substituto: '"certeza" (toda certeza é absoluta)' },
+          { expr: 'previsto antecipadamente', substituto: '"previsto" (previsão já implica antecipação)' },
+        ];
+        for (const { expr, substituto: subst } of REDUNDANCIAS) {
+          const re = new RegExp(expr, 'gi');
+          while ((m = re.exec(texto)) !== null) {
+            const inicio = Math.max(0, m.index - 50);
+            const fim = Math.min(texto.length, m.index + 50);
+            violacoes.push({
+              tipo: 'REDUNDÂNCIA',
+              ocorrencia: m[0],
+              contexto: `...${texto.slice(inicio, fim)}...`,
+              substituto: subst,
+              posicao_aprox: m.index,
+            });
+          }
+        }
+
+        // 10. Palavras repetidas em sequência (ex: "que que", "de de", "a a")
+        const repeticaoRegex = /\b(\w{2,})\s+\1\b/gi;
+        while ((m = repeticaoRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 40);
+          const fim = Math.min(texto.length, m.index + 40);
+          violacoes.push({
+            tipo: 'PALAVRA REPETIDA',
+            ocorrencia: m[0],
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: `Remover a repetição: "${m[1]}"`,
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 11a. Pontuação dupla/tripla incorreta (.. ,, ?? !!)
+        const pontDuplaRegex = /([.,!?])\1+/g;
+        while ((m = pontDuplaRegex.exec(texto)) !== null) {
+          // Exceção: "..." (reticências) é permitido
+          if (m[0] === '...') { continue; }
+          const inicio = Math.max(0, m.index - 40);
+          const fim = Math.min(texto.length, m.index + 40);
+          violacoes.push({
+            tipo: 'PONTUAÇÃO INCORRETA',
+            ocorrencia: m[0],
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: `Usar apenas um sinal de pontuação: "${m[1]}"`,
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 11. Espaço duplo
+        const espacoDuploRegex = /  +/g;
+        while ((m = espacoDuploRegex.exec(texto)) !== null) {
+          const inicio = Math.max(0, m.index - 30);
+          const fim = Math.min(texto.length, m.index + 30);
+          violacoes.push({
+            tipo: 'ESPAÇO DUPLO',
+            ocorrencia: `"${m[0]}" (${m[0].length} espaços)`,
+            contexto: `...${texto.slice(inicio, fim)}...`,
+            substituto: 'Substituir por um único espaço',
+            posicao_aprox: m.index,
+          });
+        }
+
+        // 12. Frases longas demais (> 65 palavras)
+        const frasesLongas = texto.split(/(?<=[.!?])\s+/);
+        let posAtual = 0;
+        for (const frase of frasesLongas) {
+          const palavras = frase.trim().split(/\s+/).length;
+          if (palavras > 65) {
+            violacoes.push({
+              tipo: 'FRASE LONGA',
+              ocorrencia: `${palavras} palavras`,
+              contexto: `...${frase.slice(0, 120)}...`,
+              substituto: 'Frase com mais de 65 palavras compromete a leitura técnica. Dividir em duas ou três frases menores.',
+              posicao_aprox: posAtual,
+            });
+          }
+          posAtual += frase.length + 1;
+        }
+
         const criticos = violacoes.filter(
-          (v) => v.tipo === 'TRAVESSÃO PROIBIDO' || v.tipo === 'PALAVRA PROIBIDA',
+          (v) => v.tipo === 'TRAVESSÃO PROIBIDO' || v.tipo === 'PALAVRA PROIBIDA' || v.tipo === 'ERRO GRAMATICAL' || v.tipo === 'GERUNDISMO',
         );
 
         return {
