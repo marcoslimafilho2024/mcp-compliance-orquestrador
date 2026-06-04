@@ -26,7 +26,7 @@ import { z } from 'zod';
 
 const PESOS: Record<string, number> = {
   RN1: 3, RN2: 3, RN3: 3, RN4: 2, RN5: 2, RN6: 2, RN7: 2, RN8: 2, RN9: 1,
-  MC1: 3, MC2: 3, MC3: 3, MC4: 3, MC5: 2, MC6: 2, MC7: 1, MC8: 3,
+  MC1: 3, MC2: 3, MC3: 3, MC4: 3, MC5: 2, MC6: 2, MC7: 1, MC8: 3, MC9: 2,
   MD1: 3, MD2: 3, MD3: 3, MD4: 3, MD5: 2, MD6: 2, MD7: 1,
 };
 
@@ -406,6 +406,20 @@ export function registerFase7Tools(server: McpServer): void {
             ? 'A Conclusão contém recomendação de Consulta Formal à RFB ou equivalente. Isso mina a autoridade do parecer. Mover para II.5 como medida opcional de proteção processual e substituir na Conclusão por instrução de uso deste parecer como instrumento de defesa.'
             : 'Conclusão não condiciona a posição a validação externa.',
           trecho_relevante: consultaFormalNaConc ? trecho(conclusao, 'consulta') : undefined,
+        });
+
+        // MC9 — Fundamentação com profundidade mínima (auto via subseções + palavras)
+        const subsecoesIds = ['II.1', 'II.2', 'II.3', 'II.4'];
+        const subsecoesPresentes = subsecoesIds.filter(s => fundamentacao.includes(s)).length;
+        const palavrasFund = fundamentacao.split(/\s+/).filter((w: string) => w.length > 0).length;
+        const fundTruncada = subsecoesPresentes < 3 || palavrasFund < 300;
+        itens.push({
+          id: 'MC9', peso: 2,
+          item: 'Fundamentação com profundidade mínima: ao menos 3 subseções desenvolvidas e 300 palavras',
+          status: fundTruncada ? 'REPROVADO' : 'APROVADO',
+          justificativa: fundTruncada
+            ? `Conteúdo insuficiente: ${subsecoesPresentes} subseção(ões) identificada(s), ~${palavrasFund} palavras na Fundamentação. Mínimo: 3 subseções e 300 palavras. Parecer truncado.`
+            : `Fundamentação com ${subsecoesPresentes} subseções e ~${palavrasFund} palavras — profundidade adequada.`,
         });
 
         const aplicaveis  = itens.filter(i => i.status !== 'N_A');

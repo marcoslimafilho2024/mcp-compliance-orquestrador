@@ -147,7 +147,7 @@ const FLUXO_9_FASES = {
     { numero: 5, titulo: 'Revisão de Linguagem', tools: ['revisao_linguagem(texto_completo)'], obs: 'Status APROVADO = zero violações críticas. Status REPROVADO = corrigir TODAS as críticas antes de prosseguir.' },
     { numero: 6, titulo: 'Checklist de Qualidade', tools: ['revisao_checklist_parecer(categoria="todas")', 'revisao_normas_vigentes(grupo="todos")'], obs: 'Todos os itens críticos devem estar APROVADOS antes de avançar.' },
     { numero: 7, titulo: 'Revalidação Técnica Final — Orquestrador (4 sub-fases)', tools: ['revisao_normativa()', 'mcp_chato()', 'mcp_defender()', 'fase7_liberar()'], obs: 'Sub-fases sequenciais: 7.1 revisao_normativa → 7.2 mcp_chato → 7.3 mcp_defender → 7.4 fase7_liberar. Critérios dinâmicos: só avalia itens aplicáveis ao conteúdo do parecer — N_A excluídos do score. Scoring ponderado: normativa×40% + chato×35% + defender×25%. LIBERADO se nota≥80 e nenhum critério peso-3 reprovado. Complementa Fase 6 — nenhuma substitui a outra.' },
-    { numero: 8, titulo: 'Geração do DOCX', obs: 'Somente após aprovação na Fase 7. Script Python com python-docx a partir do template Guerra. Preservar script ao lado do DOCX.' },
+    { numero: 8, titulo: 'Geração do DOCX', obs: 'Somente após aprovação na Fase 7. Antes de gerar: chamar resumo_parecer() para revisão entre pareceristas (Fellipe/Marcos validam em 2 minutos). Após confirmação: Script Python com python-docx a partir do template Guerra. Preservar script ao lado do DOCX.' },
     { numero: 9, titulo: 'Entrega', obs: 'Salvar na pasta do cliente → Renomear [RESPONDER] para [ENTREGUE] → gmail_criar_rascunho com DOCX anexo.' },
   ],
 };

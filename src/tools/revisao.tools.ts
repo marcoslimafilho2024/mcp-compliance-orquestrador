@@ -49,6 +49,9 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'E5', item: 'III. EXEMPLOS PRÁTICOS — tabelas com cálculos e simulações numéricas', como_verificar: 'Presente quando o tema envolver cálculos ou regimes tributários. Dados comparativos em tabela. N/A para temas puramente conceituais', critico: true },
       { id: 'E6', item: 'IV. CONCLUSÃO — resposta direta e numerada a todos os questionamentos', como_verificar: 'Cada item da conclusão responde uma pergunta do I. RELATÓRIO. Sem novos fundamentos jurídicos.', critico: true },
       { id: 'E8', item: 'IV. CONCLUSÃO não contém recomendação de buscar validação externa da posição jurídica deste parecer (Consulta Formal à RFB como condição, consultor externo, "avalie a necessidade de...")', como_verificar: 'Se "Consulta Formal" aparecer na Conclusão como recomendação principal ou condição: REPROVAR. O parecer é a posição definitiva. Consulta Formal cabe em II.5 (riscos) como medida opcional de proteção processual, nunca na Conclusão.', critico: true },
+      { id: 'E9', item: 'II. FUNDAMENTAÇÃO tem ao menos 4 subseções desenvolvidas (II.1, II.2, II.3, II.4 no mínimo)', como_verificar: 'Contar subseções numeradas presentes. Cada subseção deve ter ao menos 2 parágrafos de análise substantiva — não apenas uma citação de norma seguida de uma linha de comentário.', critico: true },
+      { id: 'E10', item: 'EMENTA específica: menciona o tema tributário concreto, a norma ou precedente central e a conclusão adotada em MAIÚSCULAS', como_verificar: 'Recusar EMENTAs genéricas ("MATÉRIA TRIBUTÁRIA. CONSULTA. ANÁLISE."). A EMENTA deve permitir compreender o objeto e a conclusão sem leitura do documento.', critico: true },
+      { id: 'E11', item: 'IV. CONCLUSÃO tem ao menos um item numerado por pergunta formulada no I. RELATÓRIO — nenhuma pergunta sem resposta numerada', como_verificar: 'Contar perguntas identificadas no Relatório. Contar itens numerados na Conclusão. Número de respostas ≥ número de perguntas. Se houver mais perguntas que respostas: REPROVAR.', critico: true },
       { id: 'E7', item: 'ASSINATURA — "É o parecer, s.m.j." + parágrafos centralizados com 2 pareceristas fixos', como_verificar: 'Fellipe Guerra (Contador e Advogado Tributarista, CRC/CE 21.074 | OAB/CE 49.759) e Marcos Lima (Contador e Cientista de Dados, CRC/CE 23.224). Formato: linha "___" + nome bold + cargo + registro. APENAS 2 pareceristas — Mathaus Pordeus foi removido.', critico: true },
     ],
   },
@@ -637,6 +640,89 @@ export function registerRevisaoTools(server: McpServer): void {
               ),
             },
           ],
+        };
+      } catch (err) {
+        return { content: [{ type: 'text', text: String(err) }], isError: true };
+      }
+    },
+  );
+
+  // ── resumo_parecer ──────────────────────────────────────────────────────────
+  server.registerTool(
+    'resumo_parecer',
+    {
+      description:
+        'Gera extrato estruturado do parecer para revisão rápida entre pareceristas (Fellipe/Marcos). ' +
+        'NÃO é documento para o cliente — uso interno exclusivo. ' +
+        'O revisor lê em 2 minutos e valida: posição adotada, fundamentos, conclusões, riscos. ' +
+        'Usar após a Fase 7 (LIBERADO) e antes de enviar o DOCX. ' +
+        'Inclui checklist rápido que o revisor responde antes de confirmar a entrega.',
+      inputSchema: {
+        tema: z.string().describe("Ex: 'Exclusão do ICMS da base do PIS/COFINS — LC 224/2025'"),
+        consulente: z.string().describe("Ex: 'Thomson Reuters Brasil | Domínio Sistemas'"),
+        data_parecer: z.string().describe("Ex: '03 de junho de 2026'"),
+        perguntas: z.array(z.string()).describe('Perguntas formuladas pela consulente — extraídas do I. RELATÓRIO'),
+        posicao_adotada: z.string().describe('Tese jurídica central adotada no parecer — 2 a 4 linhas objetivas'),
+        normas_principais: z.array(z.string()).describe("Normas e precedentes centrais. Ex: ['LC 224/2025', 'RE 574.706/PR (Tema 69)']"),
+        conclusoes: z.array(z.string()).describe('Itens numerados da IV. CONCLUSÃO — um por item, sem abreviação'),
+        riscos_declarados: z.array(z.string()).describe('Riscos identificados em II.5/II.6 — resumir em uma linha cada'),
+        pontos_de_atencao: z.array(z.string()).optional().describe('Aspectos que o revisor deve examinar com atenção — posições incomuns, normas recentes, lacunas não resolvidas'),
+      },
+    },
+    async ({ tema, consulente, data_parecer, perguntas, posicao_adotada, normas_principais, conclusoes, riscos_declarados, pontos_de_atencao }) => {
+      try {
+        const SEP = '─'.repeat(58);
+        const linhas: string[] = [
+          `╔${'═'.repeat(60)}╗`,
+          `║  REVISÃO ENTRE PARECERISTAS — CIRCULAÇÃO INTERNA          ║`,
+          `╠${'═'.repeat(60)}╣`,
+          `║  TEMA     : ${tema.slice(0, 46).padEnd(46)} ║`,
+          `║  CLIENTE  : ${consulente.slice(0, 46).padEnd(46)} ║`,
+          `║  DATA     : ${data_parecer.slice(0, 46).padEnd(46)} ║`,
+          `╚${'═'.repeat(60)}╝`,
+          '',
+          `■ PERGUNTAS DA CONSULENTE (${perguntas.length})`,
+          SEP,
+          ...perguntas.map((p, i) => `${i + 1}. ${p}`),
+          '',
+          `■ POSICAO JURIDICA ADOTADA`,
+          SEP,
+          posicao_adotada,
+          '',
+          `■ NORMAS CENTRAIS`,
+          SEP,
+          ...normas_principais.map(n => `  • ${n}`),
+          '',
+          `■ CONCLUSOES (${conclusoes.length} itens)`,
+          SEP,
+          ...conclusoes.map((c, i) => `${i + 1}. ${c}`),
+          '',
+          `■ RISCOS DECLARADOS`,
+          SEP,
+          ...(riscos_declarados.length > 0
+            ? riscos_declarados.map(r => `  • ${r}`)
+            : ['  (nenhum risco declarado — verificar se aplicavel ao tema)']),
+          '',
+          ...(pontos_de_atencao && pontos_de_atencao.length > 0 ? [
+            `■ PONTOS DE ATENCAO PARA O REVISOR`,
+            SEP,
+            ...pontos_de_atencao.map(p => `  ! ${p}`),
+            '',
+          ] : []),
+          `■ CHECKLIST RAPIDO — REVISOR RESPONDE ANTES DE CONFIRMAR ENTREGA`,
+          SEP,
+          '  [ ] A posicao adotada esta alinhada com o entendimento do escritorio?',
+          '  [ ] As normas citadas sustentam a conclusao sem interpretacao forcada?',
+          '  [ ] Todos os riscos relevantes foram declarados?',
+          '  [ ] A conclusao responde todas as perguntas da consulente?',
+          '  [ ] Ha algum ponto que voce mudaria antes da entrega?',
+          '',
+          `  Pareceristas: Prof. Fellipe Guerra (OAB/CE 49.759) | Prof. Marcos Lima (CRC/CE 23.224)`,
+          `  Uso interno — nao incluir no DOCX entregue ao cliente.`,
+        ];
+
+        return {
+          content: [{ type: 'text', text: linhas.join('\n') }],
         };
       } catch (err) {
         return { content: [{ type: 'text', text: String(err) }], isError: true };
