@@ -26,7 +26,7 @@ import { z } from 'zod';
 
 const PESOS: Record<string, number> = {
   RN1: 3, RN2: 3, RN3: 3, RN4: 2, RN5: 2, RN6: 2, RN7: 2, RN8: 2, RN9: 1,
-  MC1: 3, MC2: 3, MC3: 3, MC4: 3, MC5: 2, MC6: 2, MC7: 1,
+  MC1: 3, MC2: 3, MC3: 3, MC4: 3, MC5: 2, MC6: 2, MC7: 1, MC8: 3,
   MD1: 3, MD2: 3, MD3: 3, MD4: 3, MD5: 2, MD6: 2, MD7: 1,
 };
 
@@ -391,6 +391,22 @@ export function registerFase7Tools(server: McpServer): void {
         } else {
           itens.push({ id: 'MC7', peso: 1, item: 'Exemplos práticos com cálculos', status: 'N_A' });
         }
+
+        // MC8 — Conclusão não recomenda Consulta Formal como validação do próprio parecer (auto)
+        const consultaFormalNaConc = menciona(conclusao,
+          'Consulta Formal', 'consulta formal',
+          'avalie a necessidade', 'avaliar a necessidade',
+          'necessidade de consulta', 'proteção expressa contra eventual autuação',
+        );
+        itens.push({
+          id: 'MC8', peso: 3,
+          item: 'Conclusão afirma a posição jurídica com autoridade — não recomenda Consulta Formal à RFB como condição ou validação do próprio parecer',
+          status: consultaFormalNaConc ? 'REPROVADO' : 'APROVADO',
+          justificativa: consultaFormalNaConc
+            ? 'A Conclusão contém recomendação de Consulta Formal à RFB ou equivalente. Isso mina a autoridade do parecer. Mover para II.5 como medida opcional de proteção processual e substituir na Conclusão por instrução de uso deste parecer como instrumento de defesa.'
+            : 'Conclusão não condiciona a posição a validação externa.',
+          trecho_relevante: consultaFormalNaConc ? trecho(conclusao, 'consulta') : undefined,
+        });
 
         const aplicaveis  = itens.filter(i => i.status !== 'N_A');
         const paraAvaliar = aplicaveis.filter(i => i.status === 'AVALIAR');

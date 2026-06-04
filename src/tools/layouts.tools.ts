@@ -105,6 +105,11 @@ const ESTRUTURA_PARECER = {
       numero: 4,
       titulo: 'IV. CONCLUSÃO',
       conteudo: 'Resposta objetiva a TODOS os questionamentos formulados. Não introduzir novos fundamentos ou dispositivos legais. Numerada. Clara, objetiva e executável sem leitura prévia da Fundamentação.',
+      vedacoes: [
+        'PROIBIDO: recomendar ao cliente que busque Consulta Formal à RFB para validar a posição adotada neste parecer — isso mina a autoridade do documento. Este parecer É a posição definitiva.',
+        'PROIBIDO: qualquer formulação do tipo "avalie a necessidade de...", "sugere-se consultar..." referindo-se à validação da tese jurídica aqui adotada.',
+        'Consulta Formal à RFB pode aparecer APENAS em II.5 (Orientações Operacionais / Riscos) como medida adicional e opcional de proteção processual — nunca como condição ou recomendação principal na Conclusão.',
+      ],
     },
     {
       numero: 5,
