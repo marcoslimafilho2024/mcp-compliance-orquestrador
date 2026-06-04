@@ -20,6 +20,7 @@ import { registerCpcTools } from './tools/cpc.tools.js';
 import { registerCfcTools } from './tools/cfc.tools.js';
 import { registerYoutubeTools } from './tools/youtube.tools.js';
 import { registerRevisaoTools } from './tools/revisao.tools.js';
+import { registerFase7Tools } from './tools/fase7.tools.js';
 import { registerSlidesTools } from './tools/slides.tools.js';
 import { registerAlegacoesTools } from './tools/alegacoes.tools.js';
 import { registerFontesOficiaisTools } from './tools/fontes_oficiais.tools.js';
@@ -63,6 +64,7 @@ function createMcpServer(): McpServer {
   registerCfcTools(server);
   registerYoutubeTools(server);
   registerRevisaoTools(server);
+  registerFase7Tools(server);
   registerSlidesTools(server);
   registerAlegacoesTools(server);
   registerFontesOficiaisTools(server);
