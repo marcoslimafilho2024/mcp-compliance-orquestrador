@@ -21,8 +21,8 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'T1', item: 'Documento gerado a partir do template oficial (PARECER CONTÁBIL E TRIBUTÁRIO - MODELO.docx)', como_verificar: 'Verificar se o script usa Document(TEMPLATE) e clear_body()', critico: true },
       { id: 'T2', item: 'Header Guerra Advogados preservado (logo e identidade visual)', como_verificar: 'Confirmar section.header tem pelo menos 1 parágrafo com conteúdo', critico: true },
       { id: 'T3', item: 'Margens: top 3,5 cm | bottom 4,5 cm | left 3,0 cm | right 2,5 cm', como_verificar: 'Conferir doc.sections[0].top_margin.cm == 3.5', critico: true },
-      { id: 'T4', item: 'Cor do texto: #1A1A1A (Guerra dark) em corpo, títulos e células', como_verificar: 'Verificar RGBColor(0x1A, 0x1A, 0x1A) em todos os run.font.color.rgb', critico: false },
-      { id: 'T5', item: 'Bordas de tabelas: cinza #808080 via set_table_borders()', como_verificar: 'Confirmar ausência de "Table Grid" e presença de set_table_borders', critico: false },
+      { id: 'T4', item: 'Cor do texto: #1A1A2E (Guerra dark navy) em corpo, títulos e células', como_verificar: 'Verificar RGBColor(0x1A, 0x1A, 0x2E) em todos os run.font.color.rgb — NÃO usar #1A1A1A', critico: false },
+      { id: 'T5', item: 'Cabeçalho tabela: shade #EEEEEE (labels), bordas "auto", col0=2200 dxa / col1=6826 dxa', como_verificar: 'Confirmar shd fill=EEEEEE e border color="auto" na tabela de cabeçalho', critico: false },
     ],
   },
   formatacao: {
@@ -32,8 +32,11 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'F2', item: 'Texto justificado (exceto títulos)', como_verificar: 'WD_ALIGN_PARAGRAPH.JUSTIFY em todos os parágrafos de corpo', critico: true },
       { id: 'F3', item: 'Dados sempre em tabela — nunca em parágrafos corridos', como_verificar: 'Verificar se há listas de itens comparativos sem tabela', critico: true },
       { id: 'F4', item: 'Lançamentos contábeis em fonte Courier New 9pt', como_verificar: "run.font.name = 'Courier New' nos add_lancamentos", critico: false },
-      { id: 'F5', item: 'Cabeçalho de tabela cinza #C8C8C8 | zebraçado #F0F0F0/#FFFFFF', como_verificar: "shade_cell(cell, 'C8C8C8') nos headers", critico: false },
-      { id: 'F6', item: 'Nenhuma cor além de preto/cinza (sem azul, vermelho, verde)', como_verificar: 'Verificar ausência de cores não permitidas em run.font.color', critico: true },
+      { id: 'F5', item: 'Cabeçalho de tabela cinza #EEEEEE | zebraçado #F0F0F0/#FFFFFF | destaque diferenciado #D0D0D0', como_verificar: "shade_cell(cell, 'EEEEEE') nos rótulos do cabeçalho — NÃO usar #C8C8C8", critico: false },
+      { id: 'F6', item: 'Nenhuma cor além de #1A1A2E/cinzas/branco (sem azul claro, vermelho, verde, amarelo)', como_verificar: 'Verificar ausência de cores não permitidas em run.font.color e cell shading', critico: true },
+      { id: 'F7', item: 'Recuo de primeira linha 2,0 cm em todos os parágrafos de corpo', como_verificar: 'pf.first_line_indent == Cm(2.0) nos parágrafos de corpo. Títulos de seção devem ter first_line_indent=0.', critico: true },
+      { id: 'F8', item: 'Negrito APENAS em títulos de seção (I., II., II.1) e EMENTA — zero negrito no corpo do texto', como_verificar: 'Verificar que nenhum run.bold=True existe em parágrafos de corpo (Relatório, Fundamentação, Exemplos, Conclusão)', critico: true },
+      { id: 'F9', item: 'Citações com itálico e left_indent=2,5 cm, sem recuo de primeira linha, tamanho 11pt', como_verificar: 'run.italic=True | pf.left_indent=Cm(2.5) | pf.first_line_indent=Cm(0) | size=11pt em blocos de citação', critico: false },
     ],
   },
   estrutura: {
@@ -45,7 +48,7 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'E4', item: 'II. FUNDAMENTAÇÃO — núcleo técnico com subseções II.1, II.2, II.3...', como_verificar: 'Subseções em formato romano+decimal (II.1, II.2, II.3). Contém: base legal, interpretação, implicações, orientações, vedações e citações complementares como subseções', critico: true },
       { id: 'E5', item: 'III. EXEMPLOS PRÁTICOS — tabelas com cálculos e simulações numéricas', como_verificar: 'Presente quando o tema envolver cálculos ou regimes tributários. Dados comparativos em tabela. N/A para temas puramente conceituais', critico: true },
       { id: 'E6', item: 'IV. CONCLUSÃO — resposta direta e numerada a todos os questionamentos', como_verificar: 'Cada item da conclusão responde uma pergunta do I. RELATÓRIO. Sem novos fundamentos jurídicos.', critico: true },
-      { id: 'E7', item: 'ASSINATURA — "É o parecer, s.m.j." + tabela com 3 pareceristas fixos', como_verificar: 'Fellipe Guerra CRC/CE 21.074 | OAB/CE 49.759 | Marcos Lima CRC/CE 23.224 | Mathaus Pordeus OAB/CE 52.206', critico: true },
+      { id: 'E7', item: 'ASSINATURA — "É o parecer, s.m.j." + parágrafos centralizados com 2 pareceristas fixos', como_verificar: 'Fellipe Guerra (Contador e Advogado Tributarista, CRC/CE 21.074 | OAB/CE 49.759) e Marcos Lima (Contador e Cientista de Dados, CRC/CE 23.224). Formato: linha "___" + nome bold + cargo + registro. APENAS 2 pareceristas — Mathaus Pordeus foi removido.', critico: true },
     ],
   },
   base_legal_ibs_cbs: {
