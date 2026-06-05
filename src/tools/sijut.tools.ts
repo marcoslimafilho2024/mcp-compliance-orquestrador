@@ -4,56 +4,33 @@ import type { SijutAgent } from '../agents/sijut.agent.js';
 
 export function registerSijutTools(server: McpServer, agent: SijutAgent): void {
   server.registerTool(
-    'buscar_sijut',
+    'pesquisar_sijut',
     {
       description:
-        'Busca normas da Receita Federal no SIJUT (portal aberto, sem autenticação). Por padrão retorna apenas atos vigentes.',
+        'Busca e extração de normas da Receita Federal no SIJUT (portal aberto). ' +
+        'modo="buscar": pesquisa por termos, por padrão retorna apenas atos vigentes. ' +
+        'modo="extrair": extrai texto completo de uma norma via URL.',
       inputSchema: {
-        query: z.string().min(1).describe('Termos de busca (ex.: "IN RFB 2121", "IBS CBS reforma tributária")'),
-        paginas: z
-          .number()
-          .int()
-          .min(1)
-          .max(10)
-          .optional()
-          .describe('Quantas páginas de resultados percorrer (padrão 1, máximo 10)'),
-        apenas_vigentes: z
-          .boolean()
-          .optional()
-          .describe('Se false, inclui também atos revogados/históricos (padrão true — somente vigentes)'),
+        modo: z.enum(['buscar', 'extrair']).describe('"buscar" para listar normas | "extrair" para obter texto completo via URL'),
+        query: z.string().min(1).optional().describe('Termos de busca (obrigatório para modo=buscar). Ex: "IN RFB 2121", "IBS CBS"'),
+        url: z.string().url().optional().describe('URL da norma em normas.receita.fazenda.gov.br (obrigatório para modo=extrair)'),
+        paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultados (modo=buscar, padrão 1)'),
+        apenas_vigentes: z.boolean().optional().describe('false para incluir atos revogados/históricos (padrão true)'),
       },
     },
-    async ({ query, paginas, apenas_vigentes }) => {
+    async ({ modo, query, url, paginas, apenas_vigentes }) => {
       try {
-        const resultados = await agent.buscar(query, {
-          paginas,
-          apenasVigentes: apenas_vigentes !== false,
-        });
-        return {
-          content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }],
-        };
+        if (modo === 'buscar') {
+          if (!query) return { content: [{ type: 'text', text: 'query é obrigatório para modo=buscar' }], isError: true };
+          const resultados = await agent.buscar(query, { paginas, apenasVigentes: apenas_vigentes !== false });
+          return { content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }] };
+        } else {
+          if (!url) return { content: [{ type: 'text', text: 'url é obrigatório para modo=extrair' }], isError: true };
+          const texto = await agent.extrairConteudo(url);
+          return { content: [{ type: 'text', text: texto }] };
+        }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text', text: msg }], isError: true };
-      }
-    },
-  );
-
-  server.registerTool(
-    'extrair_sijut',
-    {
-      description: 'Extrai o texto completo de uma norma da Receita Federal a partir da URL do SIJUT.',
-      inputSchema: {
-        url: z.string().url().describe('URL absoluta da norma no SIJUT / normas.receita.fazenda.gov.br'),
-      },
-    },
-    async ({ url }) => {
-      try {
-        const texto = await agent.extrairConteudo(url);
-        return { content: [{ type: 'text', text: texto }] };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return { content: [{ type: 'text', text: msg }], isError: true };
+        return { content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }], isError: true };
       }
     },
   );

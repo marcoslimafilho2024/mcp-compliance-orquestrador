@@ -108,29 +108,40 @@ async function buscarEmTipo(tipo: string, query: string): Promise<CpcDocumento[]
 
 export function registerCpcTools(server: McpServer): void {
   server.registerTool(
-    'buscar_cpc',
+    'pesquisar_cpc',
     {
       description:
-        'Busca documentos do CPC (Pronunciamentos, Interpretações e Orientações Contábeis). ' +
-        'Retorna lista com número, título e URL de cada documento encontrado. ' +
-        'Use extrair_cpc(url) para obter o conteúdo completo.',
+        'Busca e extração de documentos do CPC (Pronunciamentos, Interpretações e Orientações Contábeis). ' +
+        'modo="buscar": lista documentos por termo de busca. ' +
+        'modo="extrair": extrai texto completo de um documento via URL obtida na busca.',
       inputSchema: {
-        query: z
-          .string()
-          .describe(
-            'Termo de busca — ex: "CPC 32", "tributos", "arrendamento", "instrumentos financeiros". ' +
-              'Use "*" para listar todos.',
-          ),
+        modo: z.enum(['buscar', 'extrair']).describe('"buscar" para listar documentos | "extrair" para obter texto completo via URL'),
+        query: z.string().optional().describe('Termo de busca (obrigatório para modo=buscar). Ex: "CPC 32", "tributos". Use "*" para listar todos.'),
+        url: z.string().url().optional().describe('URL do documento CPC (obrigatório para modo=extrair)'),
         tipo: z
           .enum(['pronunciamentos', 'interpretacoes', 'orientacoes', 'todos'])
           .optional()
           .default('todos')
-          .describe(
-            '"pronunciamentos" (CPC 01–50), "interpretacoes" (ICPC), "orientacoes" (OCPC) ou "todos".',
-          ),
+          .describe('"pronunciamentos" (CPC 01–50), "interpretacoes" (ICPC), "orientacoes" (OCPC) ou "todos". Apenas para modo=buscar.'),
       },
     },
-    async ({ query, tipo = 'todos' }) => {
+    async ({ modo, query, url, tipo = 'todos' }) => {
+      if (modo === 'extrair') {
+        try {
+          if (!url) return { content: [{ type: 'text', text: 'url é obrigatório para modo=extrair' }], isError: true };
+          const html = await fetchHtml(url);
+          const texto = stripHtml(html);
+          const mainMatch = html.match(
+            /<(?:article|main|div[^>]+(?:content|conteudo|corpo|body)[^>]*)>([\s\S]*?)<\/(?:article|main|div)>/i,
+          );
+          const textoFinal = mainMatch ? stripHtml(mainMatch[1]) : texto;
+          return { content: [{ type: 'text', text: JSON.stringify({ ok: true, url, tamanho_chars: textoFinal.length, conteudo: textoFinal }, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: String(err) }], isError: true };
+        }
+      }
+
+      if (!query) return { content: [{ type: 'text', text: 'query é obrigatório para modo=buscar' }], isError: true };
       try {
         let resultados: CpcDocumento[] = [];
 
@@ -174,44 +185,4 @@ export function registerCpcTools(server: McpServer): void {
     },
   );
 
-  server.registerTool(
-    'extrair_cpc',
-    {
-      description:
-        'Extrai o conteúdo completo de um documento do CPC a partir da URL. ' +
-        'Retorna o texto limpo (sem HTML) com o conteúdo do pronunciamento, interpretação ou orientação.',
-      inputSchema: {
-        url: z
-          .string()
-          .url()
-          .describe('URL completa do documento CPC — obtida via buscar_cpc.'),
-      },
-    },
-    async ({ url }) => {
-      try {
-        const html = await fetchHtml(url);
-        const texto = stripHtml(html);
-
-        const mainMatch = html.match(
-          /<(?:article|main|div[^>]+(?:content|conteudo|corpo|body)[^>]*)>([\s\S]*?)<\/(?:article|main|div)>/i,
-        );
-        const textoFinal = mainMatch ? stripHtml(mainMatch[1]) : texto;
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(
-                { ok: true, url, tamanho_chars: textoFinal.length, conteudo: textoFinal },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
-      } catch (err) {
-        return { content: [{ type: 'text', text: String(err) }], isError: true };
-      }
-    },
-  );
 }

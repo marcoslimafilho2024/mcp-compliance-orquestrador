@@ -578,37 +578,21 @@ export function registerLayoutTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'layout_regras_docx',
-    {
-      description: 'Regras obrigatórias de formatação para .docx. Aplicar em todos os documentos Word do workspace.',
-      inputSchema: {},
-    },
-    async () => ({
-      content: [{ type: 'text', text: JSON.stringify(REGRAS_DOCX, null, 2) }],
-    }),
-  );
-
-  server.registerTool(
-    'layout_regras_xlsx',
-    {
-      description: 'Regras obrigatórias de formatação para .xlsx. Aplicar em todas as planilhas Excel do workspace.',
-      inputSchema: {},
-    },
-    async () => ({
-      content: [{ type: 'text', text: JSON.stringify(REGRAS_XLSX, null, 2) }],
-    }),
-  );
-
-  server.registerTool(
-    'layout_regras_linguagem',
+    'layout_regras',
     {
       description:
-        'Regras de escrita para documentos do workspace: proibição de travessões, lista de palavras-IA proibidas com substitutos, estilo de frases e parágrafos. Aplicar SEMPRE antes de finalizar qualquer parecer, relatório ou análise.',
-      inputSchema: {},
+        'Regras obrigatórias de formatação e escrita para documentos do workspace. ' +
+        'tipo="docx": regras de formatação Word (margens, fontes, cores, espaçamento). ' +
+        'tipo="xlsx": regras de formatação Excel (grid, cores, formato BR). ' +
+        'tipo="linguagem": proibição de travessões, palavras-IA proibidas, estilo de escrita — aplicar SEMPRE antes de finalizar qualquer parecer.',
+      inputSchema: {
+        tipo: z.enum(['docx', 'xlsx', 'linguagem']).describe('"docx" para Word | "xlsx" para Excel | "linguagem" para regras de escrita'),
+      },
     },
-    async () => ({
-      content: [{ type: 'text', text: JSON.stringify(REGRAS_LINGUAGEM, null, 2) }],
-    }),
+    async ({ tipo }) => {
+      const dados = tipo === 'docx' ? REGRAS_DOCX : tipo === 'xlsx' ? REGRAS_XLSX : REGRAS_LINGUAGEM;
+      return { content: [{ type: 'text', text: JSON.stringify(dados, null, 2) }] };
+    },
   );
 
   server.registerTool(

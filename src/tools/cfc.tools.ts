@@ -107,32 +107,41 @@ async function buscarEmTipo(tipo: string, query: string): Promise<NbcNorma[]> {
 
 export function registerCfcTools(server: McpServer): void {
   server.registerTool(
-    'buscar_cfc',
+    'pesquisar_cfc',
     {
       description:
-        'Busca Normas Brasileiras de Contabilidade (NBC) no site do CFC. ' +
-        'Cobre NBC TG (Técnicas Gerais), NBC TA (Auditoria), NBC PA (Profissional do Auditor) e outras séries. ' +
-        'Retorna código, título e URL de cada norma. Use extrair_cfc(url) para o texto completo.',
+        'Busca e extração de Normas Brasileiras de Contabilidade (NBC) no site do CFC. ' +
+        'modo="buscar": lista NBCs por termo — cobre NBC TG, TA, PA e outras séries. ' +
+        'modo="extrair": extrai texto completo de uma norma via URL obtida na busca.',
       inputSchema: {
-        query: z
-          .string()
-          .describe(
-            'Termo de busca — ex: "NBC TG 32", "estoques", "auditoria independente", "ITG 1000". ' +
-              'Use "*" para listar todas.',
-          ),
+        modo: z.enum(['buscar', 'extrair']).describe('"buscar" para listar normas | "extrair" para obter texto completo via URL'),
+        query: z.string().optional().describe('Termo de busca (obrigatório para modo=buscar). Ex: "NBC TG 32", "estoques". Use "*" para listar todas.'),
+        url: z.string().url().optional().describe('URL da norma NBC no CFC (obrigatório para modo=extrair)'),
         tipo: z
           .enum(['completas', 'pmes', 'todas'])
           .optional()
           .default('todas')
-          .describe(
-            '"completas" (normas integrais), "pmes" (normas simplificadas para PMEs) ou "todas".',
-          ),
+          .describe('"completas" (normas integrais), "pmes" (simplificadas para PMEs) ou "todas". Apenas para modo=buscar.'),
       },
     },
-    async ({ query, tipo = 'todas' }) => {
+    async ({ modo, query, url, tipo = 'todas' }) => {
+      if (modo === 'extrair') {
+        try {
+          if (!url) return { content: [{ type: 'text', text: 'url é obrigatório para modo=extrair' }], isError: true };
+          const html = await fetchHtml(url);
+          const mainMatch = html.match(
+            /<(?:article|main|div[^>]+(?:content|conteudo|entry|post|norma)[^>]*)>([\s\S]*?)<\/(?:article|main|div)>/i,
+          );
+          const textoFinal = mainMatch ? stripHtml(mainMatch[1]) : stripHtml(html);
+          return { content: [{ type: 'text', text: JSON.stringify({ ok: true, url, tamanho_chars: textoFinal.length, conteudo: textoFinal }, null, 2) }] };
+        } catch (err) {
+          return { content: [{ type: 'text', text: String(err) }], isError: true };
+        }
+      }
+
+      if (!query) return { content: [{ type: 'text', text: 'query é obrigatório para modo=buscar' }], isError: true };
       try {
         let resultados: NbcNorma[] = [];
-
         if (tipo === 'todas') {
           const [completas, pmes] = await Promise.all([
             buscarEmTipo('completas', query).catch(() => [] as NbcNorma[]),
@@ -142,71 +151,10 @@ export function registerCfcTools(server: McpServer): void {
         } else {
           resultados = await buscarEmTipo(tipo, query);
         }
-
         if (resultados.length === 0) {
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(
-                  { ok: true, total: 0, query, tipo, resultados: [], aviso: 'Nenhuma norma encontrada.' },
-                  null,
-                  2,
-                ),
-              },
-            ],
-          };
+          return { content: [{ type: 'text', text: JSON.stringify({ ok: true, total: 0, query, tipo, resultados: [], aviso: 'Nenhuma norma encontrada.' }, null, 2) }] };
         }
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ ok: true, total: resultados.length, query, tipo, resultados }, null, 2),
-            },
-          ],
-        };
-      } catch (err) {
-        return { content: [{ type: 'text', text: String(err) }], isError: true };
-      }
-    },
-  );
-
-  server.registerTool(
-    'extrair_cfc',
-    {
-      description:
-        'Extrai o conteúdo completo de uma Norma Brasileira de Contabilidade (NBC) do site do CFC. ' +
-        'Retorna texto limpo com o conteúdo da norma. ' +
-        'Passe a URL obtida via buscar_cfc.',
-      inputSchema: {
-        url: z
-          .string()
-          .url()
-          .describe('URL completa da norma NBC no site do CFC — obtida via buscar_cfc.'),
-      },
-    },
-    async ({ url }) => {
-      try {
-        const html = await fetchHtml(url);
-
-        const mainMatch = html.match(
-          /<(?:article|main|div[^>]+(?:content|conteudo|entry|post|norma)[^>]*)>([\s\S]*?)<\/(?:article|main|div)>/i,
-        );
-        const textoFinal = mainMatch ? stripHtml(mainMatch[1]) : stripHtml(html);
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(
-                { ok: true, url, tamanho_chars: textoFinal.length, conteudo: textoFinal },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
+        return { content: [{ type: 'text', text: JSON.stringify({ ok: true, total: resultados.length, query, tipo, resultados }, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: String(err) }], isError: true };
       }

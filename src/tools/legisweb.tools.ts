@@ -4,58 +4,32 @@ import type { LegiswebAgent } from '../agents/legisweb.agent.js';
 
 export function registerLegiswebTools(server: McpServer, agent: LegiswebAgent): void {
   server.registerTool(
-    'buscar_legisweb',
+    'pesquisar_legisweb',
     {
-      description: 'Busca legislação e materiais no Legisweb (sessão autenticada no servidor).',
+      description:
+        'Busca e extração de legislação no Legisweb (sessão autenticada). ' +
+        'modo="buscar": pesquisa por termos, retorna lista de resultados. ' +
+        'modo="extrair": extrai texto completo de uma URL retornada pela busca.',
       inputSchema: {
-        query: z.string().min(1).describe('Termos de busca'),
-        paginas: z
-          .number()
-          .int()
-          .min(1)
-          .max(10)
-          .optional()
-          .describe(
-            'Quantas páginas de resultados percorrer (1 = só a primeira). Cada página extra clica em "Próxima" na barra de paginação. Máximo 10.',
-          ),
+        modo: z.enum(['buscar', 'extrair']).describe('"buscar" para listar resultados | "extrair" para obter texto completo via URL'),
+        query: z.string().min(1).optional().describe('Termos de busca (obrigatório para modo=buscar)'),
+        url: z.string().url().optional().describe('URL absoluta do conteúdo (obrigatório para modo=extrair)'),
+        paginas: z.number().int().min(1).max(10).optional().describe('Páginas de resultados a percorrer (modo=buscar, padrão 1)'),
       },
     },
-    async ({ query, paginas }) => {
+    async ({ modo, query, url, paginas }) => {
       try {
-        const resultados = await agent.buscar(query, { paginas });
-        return {
-          content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }],
-        };
+        if (modo === 'buscar') {
+          if (!query) return { content: [{ type: 'text', text: 'query é obrigatório para modo=buscar' }], isError: true };
+          const resultados = await agent.buscar(query, { paginas });
+          return { content: [{ type: 'text', text: JSON.stringify(resultados, null, 2) }] };
+        } else {
+          if (!url) return { content: [{ type: 'text', text: 'url é obrigatório para modo=extrair' }], isError: true };
+          const texto = await agent.extrairConteudo(url);
+          return { content: [{ type: 'text', text: texto }] };
+        }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: 'text', text: msg }],
-          isError: true,
-        };
-      }
-    },
-  );
-
-  server.registerTool(
-    'extrair_legisweb',
-    {
-      description: 'Extrai o texto completo de uma página do Legisweb a partir da URL.',
-      inputSchema: {
-        url: z.string().url().describe('URL absoluta do conteúdo no Legisweb'),
-      },
-    },
-    async ({ url }) => {
-      try {
-        const texto = await agent.extrairConteudo(url);
-        return {
-          content: [{ type: 'text', text: texto }],
-        };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return {
-          content: [{ type: 'text', text: msg }],
-          isError: true,
-        };
+        return { content: [{ type: 'text', text: err instanceof Error ? err.message : String(err) }], isError: true };
       }
     },
   );
