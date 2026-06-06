@@ -362,6 +362,130 @@ const BOAS_PRATICAS = {
   },
 };
 
+// ─── ROTEAMENTO DE PESQUISA POR TEMA (Nível 2) ───────────────────────────────
+
+type Tema =
+  | 'ibs_cbs_reforma'
+  | 'pis_cofins'
+  | 'icms'
+  | 'iss_iptu_itbi'
+  | 'simples_nacional'
+  | 'irpj_csll'
+  | 'autuacao_lancamento'
+  | 'prop_industrial'
+  | 'prescricao_decadencia'
+  | 'geral';
+
+type Ambito = 'federal' | 'estadual_ce' | 'municipal_fortaleza' | 'misto';
+type TipoParecer = 'compliance' | 'guerra';
+type Modo = 'geral' | 'empresarial';
+
+function buildPesquisaObrigatoria(
+  tema: Tema,
+  ambito: Ambito,
+  tipo_parecer: TipoParecer,
+  modo: Modo,
+) {
+  // ── Camada 1 — Legislação (sempre obrigatória) ─────────────────────────────
+  const camada1: string[] = [
+    'fonte_lc214_mapa_temas',
+    'fonte_artigo_url',
+    'fonte_catalogo',
+    'fonte_nt_catalogo',
+  ];
+  const temasComRfbNormas: Tema[] = [
+    'ibs_cbs_reforma', 'pis_cofins', 'simples_nacional', 'irpj_csll', 'autuacao_lancamento',
+  ];
+  if (temasComRfbNormas.includes(tema)) {
+    camada1.push('mcp__guerra-rfb-normas__search (vinculante=true primeiro, depois sem filtro)');
+  }
+
+  // ── Camada 2 — Jurisprudência Federal ─────────────────────────────────────
+  const camada2: string[] = [];
+  const temasComCjf: Tema[] = [
+    'ibs_cbs_reforma', 'pis_cofins', 'icms', 'iss_iptu_itbi',
+    'simples_nacional', 'irpj_csll', 'autuacao_lancamento', 'prescricao_decadencia',
+  ];
+  const temasComStj: Tema[] = [
+    'ibs_cbs_reforma', 'pis_cofins', 'icms', 'iss_iptu_itbi',
+    'simples_nacional', 'irpj_csll', 'autuacao_lancamento', 'prop_industrial', 'prescricao_decadencia',
+  ];
+  const temasComStf: Tema[] = [
+    'ibs_cbs_reforma', 'pis_cofins', 'simples_nacional', 'irpj_csll', 'prescricao_decadencia',
+  ];
+  const temasComCnj: Tema[] = [
+    'ibs_cbs_reforma', 'pis_cofins', 'simples_nacional', 'irpj_csll', 'autuacao_lancamento', 'prescricao_decadencia',
+  ];
+  if (temasComCjf.includes(tema))  camada2.push('mcp__guerra-cjf__buscar_jurisprudencia_cjf');
+  if (temasComStj.includes(tema))  camada2.push('mcp__guerra-stj__search_acordaos', 'mcp__guerra-stj__search_sumulas');
+  if (temasComStf.includes(tema))  camada2.push('mcp__guerra-stf__search_repercussao_geral');
+  if (temasComCnj.includes(tema))  camada2.push('mcp__guerra-cnj__search');
+
+  // ── Camada 3 — Jurisprudência Regional ────────────────────────────────────
+  const camada3: string[] = [];
+  const temasComTrf5: Tema[] = [
+    'pis_cofins', 'icms', 'iss_iptu_itbi', 'irpj_csll', 'autuacao_lancamento', 'prescricao_decadencia',
+  ];
+  const ambitosComTrf5: Ambito[] = ['estadual_ce', 'municipal_fortaleza', 'misto'];
+  if (temasComTrf5.includes(tema) || ambitosComTrf5.includes(ambito)) {
+    camada3.push('mcp__guerra-trf5__search_acordaos', 'mcp__guerra-trf5__search_sumulas');
+  }
+  if (tema === 'icms' || ambito === 'estadual_ce' || ambito === 'misto') {
+    camada3.push('mcp__guerra-conat-ce__search');
+  }
+  if (tema === 'iss_iptu_itbi' || ambito === 'municipal_fortaleza' || ambito === 'misto') {
+    camada3.push('mcp__guerra-crt-fortaleza__search_resolucoes', 'mcp__guerra-crt-fortaleza__search_sumulas');
+  }
+  if (tema === 'prop_industrial') {
+    camada3.push('mcp__guerra-trf2__buscar_acordaos', 'mcp__guerra-trf2__buscar_nulidade_inpi');
+  }
+
+  // ── Camada 4 — Fontes Compliance ──────────────────────────────────────────
+  const camada4: string[] = [];
+  const temasComCarf: Tema[] = ['ibs_cbs_reforma', 'pis_cofins', 'irpj_csll', 'autuacao_lancamento'];
+  if (temasComCarf.includes(tema)) {
+    camada4.push('pesquisar_carf', 'pesquisar_carf_acordaos (para os mais relevantes encontrados)');
+  }
+  camada4.push('pesquisar_taxpratico', 'buscar_youtube');
+  if (['estadual_ce', 'municipal_fortaleza', 'misto'].includes(ambito)) {
+    camada4.push('pesquisar_legisweb');
+  }
+  if (modo === 'empresarial') {
+    camada4.push('pesquisar_cfc', 'pesquisar_cpc');
+  }
+
+  return {
+    tema_detectado: tema,
+    ambito,
+    tipo_parecer,
+    modo,
+    template_docx: tipo_parecer === 'compliance' ? 'MODELO-COMPLIANCE.docx' : 'MODELO GUERRA.docx',
+    camada1: {
+      descricao: 'Legislação — sempre obrigatória, executar primeiro',
+      ferramentas: camada1,
+    },
+    camada2: {
+      descricao: 'Jurisprudência Federal — roteada pelo tema',
+      ferramentas: camada2.length ? camada2 : ['Não aplicável para este tema'],
+    },
+    camada3: {
+      descricao: 'Jurisprudência Regional — roteada por foro e âmbito',
+      ferramentas: camada3.length ? camada3 : ['Não aplicável para este âmbito'],
+    },
+    camada4: {
+      descricao: 'Fontes Compliance — pesquisa complementar',
+      ferramentas: camada4,
+    },
+    instrucoes_execucao: [
+      'Execute as camadas em ordem 1 → 4',
+      'Camada 1: chamar rfb-normas com vinculante=true primeiro, repetir sem filtro',
+      'Camada 2: incluir regime da empresa na query se modo=empresarial',
+      'Camada 4: pesquisar_carf → se encontrado resultado, chamar pesquisar_carf_acordaos para texto completo',
+      'Consolidar achados das 4 camadas antes de avançar para a Fase 3 (estrutura metodológica)',
+    ],
+  };
+}
+
 // ─── TOOLS ───────────────────────────────────────────────────────────────────
 
 export function registerAlegacoesTools(server: McpServer): void {
@@ -372,13 +496,78 @@ export function registerAlegacoesTools(server: McpServer): void {
     {
       description:
         'Retorna a estrutura de 7 tópicos obrigatórios para elaboração de respostas técnicas e alegações tributárias. ' +
-        'Usar SEMPRE ao iniciar uma resposta técnica a questionamento de cliente sobre IBS/CBS, Simples Nacional, Reforma Tributária ou qualquer tema tributário. ' +
-        'Inclui formato dissertativo, exemplos e checklist de qualidade.',
-      inputSchema: {},
+        'Usar SEMPRE ao iniciar um parecer ou resposta técnica. ' +
+        'Quando informado o tema, retorna também as camadas de pesquisa obrigatórias (MCPs Guerra a chamar na Fase 2), ' +
+        'roteadas pelo tema e âmbito — eliminando a necessidade de consultar a skill manualmente.',
+      inputSchema: {
+        tema: z
+          .enum([
+            'ibs_cbs_reforma',
+            'pis_cofins',
+            'icms',
+            'iss_iptu_itbi',
+            'simples_nacional',
+            'irpj_csll',
+            'autuacao_lancamento',
+            'prop_industrial',
+            'prescricao_decadencia',
+            'geral',
+          ])
+          .optional()
+          .default('geral')
+          .describe(
+            'Tema tributário principal. Determina quais MCPs Guerra chamar na Fase 2. ' +
+            'Use "ibs_cbs_reforma" para IBS/CBS/LC 214; "icms" para ICMS Ceará; ' +
+            '"iss_iptu_itbi" para tributos municipais de Fortaleza; "geral" quando o tema ainda não foi identificado.',
+          ),
+        ambito: z
+          .enum(['federal', 'estadual_ce', 'municipal_fortaleza', 'misto'])
+          .optional()
+          .default('federal')
+          .describe('Âmbito da questão. Ativa CONAT-CE (estadual_ce) ou CRT-Fortaleza (municipal_fortaleza).'),
+        tipo_parecer: z
+          .enum(['compliance', 'guerra'])
+          .optional()
+          .default('guerra')
+          .describe('Identidade do parecer. Define o template DOCX: MODELO-COMPLIANCE.docx ou MODELO GUERRA.docx.'),
+        modo: z
+          .enum(['geral', 'empresarial'])
+          .optional()
+          .default('geral')
+          .describe(
+            'Geral: tese jurídica sem empresa específica. ' +
+            'Empresarial: empresa com CNPJ e regime — ativa pesquisar_cfc e pesquisar_cpc na Camada 4.',
+          ),
+      },
     },
-    async () => ({
-      content: [{ type: 'text', text: JSON.stringify(ESTRUTURA_RESPOSTA_TECNICA, null, 2) }],
-    }),
+    async ({ tema = 'geral', ambito = 'federal', tipo_parecer = 'guerra', modo = 'geral' }) => {
+      const pesquisa = tema !== 'geral'
+        ? buildPesquisaObrigatoria(tema as Tema, ambito as Ambito, tipo_parecer as TipoParecer, modo as Modo)
+        : {
+            aviso: 'Tema não informado — passe o parâmetro `tema` para receber o roteamento das Camadas 1-4.',
+            temas_disponiveis: [
+              'ibs_cbs_reforma', 'pis_cofins', 'icms', 'iss_iptu_itbi',
+              'simples_nacional', 'irpj_csll', 'autuacao_lancamento',
+              'prop_industrial', 'prescricao_decadencia',
+            ],
+          };
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                estrutura_resposta: ESTRUTURA_RESPOSTA_TECNICA,
+                pesquisa_obrigatoria: pesquisa,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
   );
 
   // ── alegacao_hierarquia_fontes ──────────────────────────────────────────────
