@@ -19,6 +19,7 @@ import { registerFase7Tools } from './tools/fase7.tools.js';
 import { registerSlidesTools } from './tools/slides.tools.js';
 import { registerAlegacoesTools } from './tools/alegacoes.tools.js';
 import { registerFontesOficiaisTools } from './tools/fontes_oficiais.tools.js';
+import { registerMentoriaTools } from './tools/mentoria.tools.js';
 import { startServer } from './server.js';
 
 const legiswebAgent = new LegiswebAgent();
@@ -60,6 +61,7 @@ function createMcpServer(): McpServer {
   registerSlidesTools(server);
   registerAlegacoesTools(server);
   registerFontesOficiaisTools(server);
+  registerMentoriaTools(server);
 
   return server;
 }

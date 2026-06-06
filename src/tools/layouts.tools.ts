@@ -56,6 +56,16 @@ const TEMPLATES_CATALOG = {
     quando_usar: 'Consulta de alíquotas para apuração DAS ou planejamento tributário',
     ja_formatado: true,
   },
+  entrega_mentoria_fg: {
+    arquivo: 'MODELO DE ENTREGA MENTORIA FG.docx',
+    caminho_windows: 'G:\\Meu Drive\\Projetos de Execução\\_Dados_Base\\Genesis\\_layouts\\ENTREGAS MENTORIA FG\\MODELO DE ENTREGA MENTORIA FG.docx',
+    tipo: 'docx',
+    proposito: 'Template de entrega de encontro de mentoria individual — Prof. Fellipe Guerra',
+    quando_usar: 'Cada encontro mensal da mentoria individual. Gera Alinhamento_VF.docx + NotaTecnica_VF.docx via script gerar_entrega_mentoria_mq.py',
+    ja_formatado: true,
+    mcp_tool: 'mentoria_fg_schema',
+    script_gerador: 'C:\\Users\\Administrador\\gerar_entrega_mentoria_mq.py',
+  },
 };
 
 const ESTRUTURA_PARECER = {
