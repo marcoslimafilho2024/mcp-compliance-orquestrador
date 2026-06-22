@@ -53,6 +53,7 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'E10', item: 'EMENTA específica: menciona o tema tributário concreto, a norma ou precedente central e a conclusão adotada em MAIÚSCULAS', como_verificar: 'Recusar EMENTAs genéricas ("MATÉRIA TRIBUTÁRIA. CONSULTA. ANÁLISE."). A EMENTA deve permitir compreender o objeto e a conclusão sem leitura do documento.', critico: true },
       { id: 'E11', item: 'IV. CONCLUSÃO tem ao menos um item numerado por pergunta formulada no I. RELATÓRIO — nenhuma pergunta sem resposta numerada', como_verificar: 'Contar perguntas identificadas no Relatório. Contar itens numerados na Conclusão. Número de respostas ≥ número de perguntas. Se houver mais perguntas que respostas: REPROVAR.', critico: true },
       { id: 'E7', item: 'ASSINATURA — "É o parecer, s.m.j." + parágrafos centralizados com 2 pareceristas fixos', como_verificar: 'Fellipe Guerra (Contador e Advogado Tributarista, CRC/CE 21.074 | OAB/CE 49.759) e Marcos Lima (Contador e Cientista de Dados, CRC/CE 23.224). Formato: linha "___" + nome bold + cargo + registro. APENAS 2 pareceristas — Mathaus Pordeus foi removido.', critico: true },
+      { id: 'E12', item: 'CITAÇÃO DIRETA é o padrão da FUNDAMENTAÇÃO — todo fundamento (norma, jurisprudência ou doutrina) é introduzido pelo TRECHO LITERAL do dispositivo, entre aspas ou em recuo, com referência exata, seguido da subsunção ao caso', como_verificar: 'Para cada afirmação de fundamento em II.: deve existir transcrição literal entre aspas/recuo + referência (norma: art./inciso/§ + órgão; jurisprudência: tribunal, nº, relator, data; doutrina: autor, obra, página). Paráfrase isolada NÃO sustenta conclusão: se um fundamento aparece só parafraseado, REPROVAR. Citar apenas o trecho pertinente (não o artigo inteiro quando só um inciso importa). Cada transcrição é seguida de ao menos uma frase de aplicação ao caso.', critico: true },
     ],
   },
   base_legal_ibs_cbs: {
@@ -125,6 +126,7 @@ const CHECKLIST: Record<string, { descricao: string; itens: Array<{ id: string; 
       { id: 'RV9', item: 'Riscos e limitações identificados com consequências práticas', como_verificar: 'Seção V (Vedações e Exceções) apresenta ao menos 3 vedações/riscos específicos com consequências práticas descritas', critico: true },
       { id: 'RV10', item: 'Exemplos práticos: cálculos aritmeticamente corretos, alíquotas e datas do período de vigência normativa', como_verificar: 'Verificar cada cálculo manualmente. Confirmar vigência normativa dos valores usados. N/A se não há exemplos práticos.', critico: true },
       { id: 'RV11', item: 'Sem exemplo que contradiga a fundamentação ou a conclusão', como_verificar: 'Resultado numérico do exemplo deve ser consistente com o posicionamento jurídico adotado. N/A se não há exemplos.', critico: true },
+      { id: 'RV12', item: 'Fidelidade da citação direta — cada trecho transcrito reproduz o texto EXATO do dispositivo/precedente vigente, sem reticências que distorçam o sentido, com referência conferida na fonte oficial', como_verificar: 'Conferir cada transcrição literal contra a fonte (URL/texto legal). Texto exato, dispositivo correto (art./inciso/§), versão vigente na data do parecer (nada revogado citado como vigente). Reticências [...] não podem alterar o sentido. Referência completa e correta. Citação literal errada REPROVA — é pior que paráfrase.', critico: true },
     ],
   },
   book_demonstracoes: {
@@ -634,6 +636,140 @@ export function registerRevisaoTools(server: McpServer): void {
                   violacoes_criticas: criticos.length,
                   status: violacoes.length === 0 ? '✓ APROVADO — nenhuma violação encontrada' : `✗ REPROVADO — ${violacoes.length} violação(ões) encontrada(s)`,
                   violacoes,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      } catch (err) {
+        return { content: [{ type: 'text', text: String(err) }], isError: true };
+      }
+    },
+  );
+
+  // ── revisao_citacoes (REVISÃO CHATA) ────────────────────────────────────────
+  server.registerTool(
+    'revisao_citacoes',
+    {
+      description:
+        'REVISÃO CHATA DE CITAÇÕES — auditor adversarial de fidelidade da fundamentação. ' +
+        'Extrai cada citação (dispositivo legal, jurisprudência, súmula, norma contábil) da FUNDAMENTAÇÃO/CONCLUSÃO ' +
+        'e devolve, por citação, a frase em que aparece, se está TRANSCRITA (entre aspas) ou apenas REFERENCIADA, ' +
+        'e uma instrução de verificação para o revisor decidir o veredito: ' +
+        'VERDE (o trecho sustenta a afirmação) | AMARELO (exagera, é parcial ou está só parafraseado — CORRIGIR/transcrever) | ' +
+        'VERMELHO (não sustenta, está errada, foi revogada ou contradiz a fundamentação — REJEITAR e indicar a correção). ' +
+        'REGRA DE BLOQUEIO: qualquer VERMELHO reprova o parecer. ' +
+        'Sinaliza ainda: (a) citações que aparecem na CONCLUSÃO e não na FUNDAMENTAÇÃO (possível argumento novo/contradição); ' +
+        '(b) fundamento apenas referenciado, sem transcrição literal (viola E12). ' +
+        'Passe "fontes" (texto oficial) quando tiver para checagem de fidelidade externa (L2); sem fontes, verifica consistência interna (L1). ' +
+        'Proibido inventar citação para salvar uma afirmação: se nenhuma fonte sustenta, muda-se a AFIRMAÇÃO, não a citação.',
+      inputSchema: {
+        fundamentacao: z.string().describe('Texto completo da seção II — FUNDAMENTAÇÃO'),
+        conclusao: z.string().optional().default('').describe('Texto completo da seção IV — CONCLUSÃO'),
+        fontes: z
+          .array(
+            z.object({
+              marcador: z.string().describe('Ex: "LC 214/2025, art. 26, IV"'),
+              texto_oficial: z.string().describe('Trecho literal da fonte oficial para conferência'),
+            }),
+          )
+          .optional()
+          .describe('Textos oficiais das normas/precedentes citados, para verificação de fidelidade (L2).'),
+      },
+    },
+    async ({ fundamentacao, conclusao = '', fontes = [] }) => {
+      try {
+        const segmentar = (txt: string, origem: string) =>
+          txt
+            .split(/(?<=[.;:!?])\s+|\n+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map((frase) => ({ frase, origem }));
+        const frases = [...segmentar(fundamentacao, 'FUNDAMENTACAO'), ...segmentar(conclusao, 'CONCLUSAO')];
+
+        const PADROES: Array<{ tipo: string; re: RegExp }> = [
+          { tipo: 'DISPOSITIVO_LEGAL', re: /\bart(?:igo)?\.?\s*\d+[º°ºo]?(?:\s*,?\s*§\s*\d+[º°ºo]?)?(?:\s*,?\s*(?:inciso\s+)?[IVXLC]+\b)?(?:\s*,?\s*["“]?[a-z]["”]?\b)?/gi },
+          { tipo: 'PARAGRAFO', re: /§\s*\d+[º°ºo]?(?:\s*,?\s*(?:inciso\s+)?[IVXLC]+\b)?/g },
+          { tipo: 'JURIS_TEMA', re: /\bTema\s+\d+\b/gi },
+          { tipo: 'JURIS_RE', re: /\bRE\s+[\d.]+\b/g },
+          { tipo: 'JURIS_RESP', re: /\bREsp\s+[\d.]+\/[A-Z]{2}\b/g },
+          { tipo: 'SUMULA', re: /\bS[úu]mula(?:\s+Vinculante)?\s+\d+\b/gi },
+          { tipo: 'SC_COSIT', re: /\bSC\s+COSIT\s+n?[ºo]?\.?\s*\d+\/\d+\b/gi },
+          { tipo: 'NORMA', re: /\b(?:LC|Lei|EC|Decreto|MP|IN|Res\.?|Resolução)\s+(?:CGIBS\s+|CGSN\s+)?n?[ºo]?\.?\s*[\d.]+\/\d{2,4}\b/gi },
+          { tipo: 'NORMA_CONTABIL', re: /\b(?:CPC|NBC\s+TG)\s+\d+(?:\s*\(R\d+\))?\b/gi },
+        ];
+
+        const norm = (s: string) => s.toLowerCase().replace(/[º°ºo.,"“”]/g, '').replace(/\s+/g, ' ').trim();
+        type Cit = { marcador: string; tipo: string; origem: string; transcrita: boolean; frase: string };
+        const citacoes: Cit[] = [];
+        for (const { frase, origem } of frases) {
+          const transcrita = /["“][^"”]{15,}["”]/.test(frase);
+          for (const { tipo, re } of PADROES) {
+            re.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(frase)) !== null) {
+              citacoes.push({
+                marcador: m[0].replace(/\s+/g, ' ').trim(),
+                tipo,
+                origem,
+                transcrita,
+                frase: frase.length > 320 ? frase.slice(0, 320) + '…' : frase,
+              });
+            }
+          }
+        }
+
+        const fontesMap = new Map(fontes.map((f) => [norm(f.marcador), f.texto_oficial]));
+        const setFund = new Set(citacoes.filter((c) => c.origem === 'FUNDAMENTACAO').map((c) => norm(c.marcador)));
+
+        const itens = citacoes.map((c, i) => {
+          const fonteOficial = [...fontesMap.entries()].find(([k]) => norm(c.marcador).includes(k) || k.includes(norm(c.marcador)))?.[1];
+          const soNaConclusao = c.origem === 'CONCLUSAO' && !setFund.has(norm(c.marcador));
+          const alertas: string[] = [];
+          if (soNaConclusao) alertas.push('APARECE NA CONCLUSÃO E NÃO NA FUNDAMENTAÇÃO — possível argumento novo ou citação trocada (verificar contradição).');
+          if (!c.transcrita && (c.tipo === 'DISPOSITIVO_LEGAL' || c.tipo === 'PARAGRAFO')) alertas.push('Apenas REFERENCIADO, sem transcrição literal — se for fundamento central, transcrever (E12).');
+          if (!fonteOficial) alertas.push('Sem fonte oficial fornecida — verificação L1 (consistência interna) apenas; conferir o texto na fonte para L2.');
+          return {
+            id: `CIT${i + 1}`,
+            marcador: c.marcador,
+            tipo: c.tipo,
+            origem: c.origem,
+            transcrita: c.transcrita,
+            frase: c.frase,
+            fonte_oficial: fonteOficial ?? null,
+            instrucao_verificacao: `O trecho citado em "${c.marcador}" realmente diz o que esta frase afirma? ${fonteOficial ? 'Conferir contra o texto_oficial fornecido (fidelidade L2).' : 'Conferir contra a fonte oficial (L2) — não assumir.'} Atribuir veredito VERDE/AMARELO/VERMELHO.`,
+            alertas,
+            veredito: 'AVALIAR',
+          };
+        });
+
+        const referenciadas = itens.filter((i) => !i.transcrita && (i.tipo === 'DISPOSITIVO_LEGAL' || i.tipo === 'PARAGRAFO')).length;
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  ok: true,
+                  auditor: 'revisao_citacoes (CHATA)',
+                  rubrica: {
+                    VERDE: 'O trecho citado sustenta exatamente a afirmação. Manter.',
+                    AMARELO: 'Exagera, é parcial ou está só parafraseado. CORRIGIR: estreitar a afirmação ao que a fonte diz, ou transcrever o dispositivo. Permitido auto-corrigir desde que ancorado em fonte já obtida.',
+                    VERMELHO: 'Não sustenta, está errada, foi revogada ou contradiz a fundamentação. REJEITAR: remover/substituir a citação ou mudar a afirmação. Nunca inventar citação para salvar a tese.',
+                  },
+                  regra_bloqueio: 'Qualquer item VERMELHO reprova o parecer (não liberar até resolver).',
+                  resumo: {
+                    total_citacoes: itens.length,
+                    transcritas: itens.filter((i) => i.transcrita).length,
+                    apenas_referenciadas: referenciadas,
+                    com_fonte_oficial: itens.filter((i) => i.fonte_oficial).length,
+                    so_na_conclusao: itens.filter((i) => i.alertas.some((a) => a.startsWith('APARECE NA CONCLUSÃO'))).length,
+                  },
+                  instrucao: `Avaliar os ${itens.length} itens com veredito AVALIAR. Para cada um: o trecho diz o que a frase afirma? Marcar VERDE/AMARELO/VERMELHO. Resolver TODOS os VERMELHO antes de liberar.`,
+                  itens,
                 },
                 null,
                 2,
