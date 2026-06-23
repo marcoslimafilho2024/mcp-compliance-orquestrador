@@ -11,6 +11,12 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import {
+  PROTOCOLO,
+  ERROS_LC214,
+  ERROS_OUTROS,
+  TEMPLATE_QUADRO,
+} from './revisao_citacoes_catalogo.js';
 
 // ─── DADOS ESTÁTICOS ──────────────────────────────────────────────────────────
 
@@ -664,9 +670,17 @@ export function registerRevisaoTools(server: McpServer): void {
         'Sinaliza ainda: (a) citações que aparecem na CONCLUSÃO e não na FUNDAMENTAÇÃO (possível argumento novo/contradição); ' +
         '(b) fundamento apenas referenciado, sem transcrição literal (viola E12). ' +
         'Passe "fontes" (texto oficial) quando tiver para checagem de fidelidade externa (L2); sem fontes, verifica consistência interna (L1). ' +
-        'Proibido inventar citação para salvar uma afirmação: se nenhuma fonte sustenta, muda-se a AFIRMAÇÃO, não a citação.',
+        'Proibido inventar citação para salvar uma afirmação: se nenhuma fonte sustenta, muda-se a AFIRMAÇÃO, não a citação. ' +
+        'CATÁLOGO DE APOIO (parâmetro "modo"): além da auditoria dinâmica, anexa o protocolo de verificação em 6 passos, ' +
+        'a base de erros recorrentes da LC 214/2025 (casos reais, ex.: art. 169 §8º, art. 11 X, art. 258 vs 261) e o template de quadro. ' +
+        'modo="auditar" (padrão) só audita; "erros_lc214"/"protocolo"/"template_quadro" anexam o respectivo catálogo; "todos" anexa tudo. ' +
+        'Pode ser chamada SEM "fundamentacao" apenas para consultar o catálogo (ex.: modo="erros_lc214").',
       inputSchema: {
-        fundamentacao: z.string().describe('Texto completo da seção II — FUNDAMENTAÇÃO'),
+        fundamentacao: z
+          .string()
+          .optional()
+          .default('')
+          .describe('Texto completo da seção II — FUNDAMENTAÇÃO. Opcional quando só se quer consultar o catálogo (modo).'),
         conclusao: z.string().optional().default('').describe('Texto completo da seção IV — CONCLUSÃO'),
         fontes: z
           .array(
@@ -677,9 +691,20 @@ export function registerRevisaoTools(server: McpServer): void {
           )
           .optional()
           .describe('Textos oficiais das normas/precedentes citados, para verificação de fidelidade (L2).'),
+        modo: z
+          .enum(['auditar', 'protocolo', 'erros_lc214', 'template_quadro', 'todos'])
+          .optional()
+          .default('auditar')
+          .describe(
+            '"auditar" (padrão) — só a auditoria dinâmica | ' +
+            '"protocolo" — anexa o protocolo de 6 passos | ' +
+            '"erros_lc214" — anexa a base de erros recorrentes da LC 214/2025 e de outras normas | ' +
+            '"template_quadro" — anexa o quadro de verificação em branco | ' +
+            '"todos" — auditoria + todos os catálogos',
+          ),
       },
     },
-    async ({ fundamentacao, conclusao = '', fontes = [] }) => {
+    async ({ fundamentacao = '', conclusao = '', fontes = [], modo = 'auditar' }) => {
       try {
         const segmentar = (txt: string, origem: string) =>
           txt
@@ -747,33 +772,41 @@ export function registerRevisaoTools(server: McpServer): void {
 
         const referenciadas = itens.filter((i) => !i.transcrita && (i.tipo === 'DISPOSITIVO_LEGAL' || i.tipo === 'PARAGRAFO')).length;
 
+        const incluiAuditoria = fundamentacao.trim().length > 0;
+        const auditoria = incluiAuditoria
+          ? {
+              auditor: 'revisao_citacoes (CHATA)',
+              rubrica: {
+                VERDE: 'O trecho citado sustenta exatamente a afirmação. Manter.',
+                AMARELO: 'Exagera, é parcial ou está só parafraseado. CORRIGIR: estreitar a afirmação ao que a fonte diz, ou transcrever o dispositivo. Permitido auto-corrigir desde que ancorado em fonte já obtida.',
+                VERMELHO: 'Não sustenta, está errada, foi revogada ou contradiz a fundamentação. REJEITAR: remover/substituir a citação ou mudar a afirmação. Nunca inventar citação para salvar a tese.',
+              },
+              regra_bloqueio: 'Qualquer item VERMELHO reprova o parecer (não liberar até resolver).',
+              resumo: {
+                total_citacoes: itens.length,
+                transcritas: itens.filter((i) => i.transcrita).length,
+                apenas_referenciadas: referenciadas,
+                com_fonte_oficial: itens.filter((i) => i.fonte_oficial).length,
+                so_na_conclusao: itens.filter((i) => i.alertas.some((a) => a.startsWith('APARECE NA CONCLUSÃO'))).length,
+              },
+              instrucao: `Avaliar os ${itens.length} itens com veredito AVALIAR. Para cada um: o trecho diz o que a frase afirma? Marcar VERDE/AMARELO/VERMELHO. Resolver TODOS os VERMELHO antes de liberar.`,
+              itens,
+            }
+          : {};
+
+        const referencia: Record<string, unknown> = {};
+        if (modo === 'todos' || modo === 'protocolo') referencia.protocolo = PROTOCOLO;
+        if (modo === 'todos' || modo === 'erros_lc214') {
+          referencia.erros_lc214 = ERROS_LC214;
+          referencia.erros_outras_normas = ERROS_OUTROS;
+        }
+        if (modo === 'todos' || modo === 'template_quadro') referencia.template_quadro = TEMPLATE_QUADRO;
+
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(
-                {
-                  ok: true,
-                  auditor: 'revisao_citacoes (CHATA)',
-                  rubrica: {
-                    VERDE: 'O trecho citado sustenta exatamente a afirmação. Manter.',
-                    AMARELO: 'Exagera, é parcial ou está só parafraseado. CORRIGIR: estreitar a afirmação ao que a fonte diz, ou transcrever o dispositivo. Permitido auto-corrigir desde que ancorado em fonte já obtida.',
-                    VERMELHO: 'Não sustenta, está errada, foi revogada ou contradiz a fundamentação. REJEITAR: remover/substituir a citação ou mudar a afirmação. Nunca inventar citação para salvar a tese.',
-                  },
-                  regra_bloqueio: 'Qualquer item VERMELHO reprova o parecer (não liberar até resolver).',
-                  resumo: {
-                    total_citacoes: itens.length,
-                    transcritas: itens.filter((i) => i.transcrita).length,
-                    apenas_referenciadas: referenciadas,
-                    com_fonte_oficial: itens.filter((i) => i.fonte_oficial).length,
-                    so_na_conclusao: itens.filter((i) => i.alertas.some((a) => a.startsWith('APARECE NA CONCLUSÃO'))).length,
-                  },
-                  instrucao: `Avaliar os ${itens.length} itens com veredito AVALIAR. Para cada um: o trecho diz o que a frase afirma? Marcar VERDE/AMARELO/VERMELHO. Resolver TODOS os VERMELHO antes de liberar.`,
-                  itens,
-                },
-                null,
-                2,
-              ),
+              text: JSON.stringify({ ok: true, ...auditoria, ...referencia }, null, 2),
             },
           ],
         };
