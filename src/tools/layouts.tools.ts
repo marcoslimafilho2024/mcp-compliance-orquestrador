@@ -19,11 +19,11 @@ const TEMPLATES_CATALOG = {
     ja_formatado: true,
   },
   parecer_guerra: {
-    arquivo: 'PARECER TÉCNICO - MODELO.docx',
-    caminho: 'Consultorias Guerra/00_Modelos/PARECER TÉCNICO - MODELO.docx',
-    caminho_windows: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\00_Genesis\\_layouts\\PARECER MODELO GUERRA\\PARECER CONTÁBIL E TRIBUTÁRIO - MODELO GUERRA.docx',
+    arquivo: 'PARECER TÉCNICO - MODELO GUERRA ADVOGADOS.docx',
+    caminho: 'Consultorias Guerra/00_Modelos/PARECER TÉCNICO - MODELO GUERRA ADVOGADOS.docx',
+    caminho_windows: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\PARECER TÉCNICO - MODELO GUERRA ADVOGADOS.docx',
     tipo: 'docx',
-    proposito: 'Template de Parecer Técnico com identidade visual da Guerra Advogados (papel timbrado no header)',
+    proposito: 'Template de Parecer Técnico com identidade visual real da Guerra Advogados (logo GUERRA ADVOGADOS timbrado no header/footer, extraído do parecer Thomson/Domínio 01/06/2026). O arquivo antigo "PARECER TÉCNICO - MODELO.docx" usava o logo pessoal "Professor Fellipe Guerra" — incorreto, não usar.',
     quando_usar:
       'Pareceres emitidos sob a marca Guerra Advogados (clientes: Contabilizei, Fortes Tecnologia, Thompson/Domínio Sistemas, São Geraldo)',
     ja_formatado: true,
@@ -34,8 +34,8 @@ const TEMPLATES_CATALOG = {
     assinatura_formato: 'É o parecer, s.m.j. | Fortaleza, [DATA POR EXTENSO]. | [Linha de assinatura + Nome + Cargo + Registro de cada parecerista, centralizado]',
     assinatura_obs: 'Vedada qualquer alteração nos dados dos pareceristas. Não inserir assinaturas digitais, não alterar registros profissionais. Apenas 2 pareceristas: Fellipe Guerra e Marcos Lima.',
     email_templates: {
-      perguntas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Perguntas.pdf',
-      respostas: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Resposta.pdf',
+      perguntas: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Perguntas.pdf',
+      respostas: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\Fellipe Guerra - Modelo de Email Resposta.pdf',
     },
   },
   book_demonstracoes: {
@@ -211,6 +211,16 @@ const ESTRUTURA_PARECER_EMPRESARIAL = {
 };
 
 const REGRAS_DOCX = {
+  margens_pagina: {
+    top_cm: 2.36,
+    bottom_cm: 2.65,
+    left_cm: 2.75,
+    right_cm: 2.75,
+    header_cm: 0.08,
+    footer_cm: 2.3,
+    regra: 'Margens do padrão Guerra Advogados (aferidas no DOCX de referência de Nota Técnica, pasta 03_Parecer/Cataratas Rosangela). Margens superior e inferior menores que o padrão A4 de 2,5 cm por causa do timbre (logo no header, faixa de contato no footer) — não usar Cm(2.5) genérico quando o documento usa o timbre da Guerra.',
+    implementacao: 'section.top_margin = Cm(2.36) | section.bottom_margin = Cm(2.65) | section.left_margin = Cm(2.75) | section.right_margin = Cm(2.75) | section.header_distance = Cm(0.08) | section.footer_distance = Cm(2.3)',
+  },
   espacamento_linhas: 1.5,
   alinhamento: 'justificado',
   paragrafos: {

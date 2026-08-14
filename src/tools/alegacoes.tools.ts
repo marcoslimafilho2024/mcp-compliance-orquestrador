@@ -345,7 +345,7 @@ const BOAS_PRATICAS = {
   ],
   pareceres_modelo_referencia: {
     descricao: 'Biblioteca de Pareceres Técnicos modelo elaborados pela Consultoria Guerra.',
-    caminho: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\',
+    caminho: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\',
     lista: [
       { numero: 'PT 01', tema: 'Conceito de Receita para fins de RBT12 (Simples Nacional)' },
       { numero: 'PT 02', tema: 'Multa por Atraso na Entrega do PGDAS-D' },

@@ -103,14 +103,14 @@ const FONTES_CATALOGO = {
     {
       id: 'regulamento_cbs',
       nome: 'Regulamento da CBS',
-      url: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\REGULAMENTO DA CBS.pdf',
+      url: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\REGULAMENTO DA CBS.pdf',
       descricao: 'Regulamento infralegal da Contribuição sobre Bens e Serviços',
       tipo: 'PDF local',
     },
     {
       id: 'regulamento_ibs',
       nome: 'Regulamento do IBS',
-      url: 'G:\\Meu Drive\\000_PROJETO CLAUDE\\Consultorias Guerra\\00_Modelos\\REGULAMENTO DO IBS.pdf',
+      url: 'G:\\Meu Drive\\Projetos de Execução\\Consultorias\\Guerra\\00_Modelos\\REGULAMENTO DO IBS.pdf',
       descricao: 'Regulamento infralegal do Imposto sobre Bens e Serviços',
       tipo: 'PDF local',
     },
