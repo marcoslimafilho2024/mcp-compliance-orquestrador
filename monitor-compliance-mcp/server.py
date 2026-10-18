@@ -14,6 +14,30 @@ from auth import Verifier, SCOPE
 from oauth_provider import Provider
 
 
+class PublicOAuthMCP(FastMCP):
+    """Publicar somente o método de cliente aceito pelo nosso provedor."""
+
+    def streamable_http_app(self):
+        from mcp.server.auth.handlers.metadata import MetadataHandler
+        from mcp.server.auth.routes import build_metadata, cors_middleware
+        from starlette.routing import Route
+
+        app = super().streamable_http_app()
+        auth = self.settings.auth
+        metadata = build_metadata(auth.issuer_url, auth.service_documentation_url,
+                                  auth.client_registration_options, auth.revocation_options)
+        # O SDK 1.30 anuncia métodos com segredo por padrão, mas este
+        # provedor aceita clientes públicos com PKCE S256 obrigatório.
+        metadata.token_endpoint_auth_methods_supported = ['none']
+        metadata.revocation_endpoint_auth_methods_supported = ['none']
+        path = '/.well-known/oauth-authorization-server'
+        replacement = Route(path, endpoint=cors_middleware(MetadataHandler(metadata).handle,
+                            ['GET', 'OPTIONS']), methods=['GET', 'OPTIONS'])
+        app.router.routes[:] = [replacement if getattr(route, 'path', None) == path
+                                else route for route in app.router.routes]
+        return app
+
+
 def create_server(backend=None, *, local=False, verifier=None, provider=None):
     backend = backend or WorkMonitor()
     settings = {}
@@ -40,7 +64,8 @@ def create_server(backend=None, *, local=False, verifier=None, provider=None):
                      required_scopes=verifier.public_scopes if getattr(verifier,'supabase',False) else [SCOPE], validate_token_resource=True))
         settings['transport_security']=TransportSecuritySettings(enable_dns_rebinding_protection=True,
               allowed_hosts=[host,'127.0.0.1:*','localhost:*'],allowed_origins=['https://'+host])
-    mcp = FastMCP('Monitor Compliance', host='0.0.0.0' if not local else '127.0.0.1',
+    server_class = PublicOAuthMCP if facade else FastMCP
+    mcp = server_class('Monitor Compliance', host='0.0.0.0' if not local else '127.0.0.1',
                   port=int(os.environ.get('PORT','8000')), stateless_http=True, json_response=True,
                   instructions='Consultar apenas os dados solicitados. Preservar datas, escopo, nomes e unidades do portal. Não inferir faltas ou dedicação por telemetria.', **settings)
     annotations = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
@@ -49,7 +74,7 @@ def create_server(backend=None, *, local=False, verifier=None, provider=None):
     @mcp.tool(annotations=annotations, meta=metadata, structured_output=True)
     async def status_integracao() -> dict[str, Any]:
         """Informar configuração do servidor, sem testar login nem retornar segredos."""
-        return {'servidor':'Monitor Compliance','versao':'0.3.0','transporte':'stdio' if local else 'streamable-http',
+        return {'servidor':'Monitor Compliance','versao':'0.3.1','transporte':'stdio' if local else 'streamable-http',
                 'modo':'consulta ao portal','credenciais_configuradas':bool(os.getenv('WORKMONITOR_USER') and os.getenv('WORKMONITOR_PASSWORD')),
                 'autenticacao_workmonitor':'nao_verificada_por_esta_ferramenta',
                 'monitoramento_continuo':False}

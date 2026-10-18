@@ -1,4 +1,4 @@
-# Monitor Compliance MCP 0.3.0
+# Monitor Compliance MCP 0.3.1
 
 Serviço de consultas ao WorkMonitor, hospedado no Railway e autenticado com uma conta existente do Supabase. O módulo é independente do orquestrador na raiz do repositório.
 
@@ -27,6 +27,8 @@ Tokens de acesso duram 1 hora e refresh tokens 7 dias. Remover um usuário da li
 
 Compatibilidade: o SDK MCP 1.30.0 declara `client_secret` opcional, mas sem default no formulário de revogação. A inicialização corrige esse default para `None`, preservando o autenticador do SDK. O teste cobre revogação de cliente público sem segredo.
 
+A descoberta OAuth anuncia `none` como método de autenticação de cliente, correspondente ao cadastro público efetivamente aceito. A aplicação substitui apenas os metadados padrão do SDK; PKCE, autenticação do usuário, consentimento e verificação de tokens continuam obrigatórios. O teste de fluxo completo escolhe o método anunciado na descoberta.
+
 ## Railway
 
 Usar este diretório como Root Directory, com o Dockerfile incluído. O build empacota o frontend Supabase localmente e instala Chromium. O processo de aplicação executa sem root; o entrypoint prepara a propriedade do volume antes de descartar privilégios.
@@ -49,7 +51,7 @@ No ChatGPT, adicionar um servidor MCP personalizado com a URL HTTPS real termina
 
 ## Validação
 
-20 testes aprovados na versão 0.3.0: protocolo MCP via HTTP e stdio, rejeição de tokens, filtros e escopo, datas, fluxo OAuth completo com PKCE, rejeição de origem/CSRF, uso único, renovação, revogação e persistência após reinicialização. O frontend também compila com dependências fixadas e lockfile.
+20 testes aprovados na versão 0.3.1: protocolo MCP via HTTP e stdio, rejeição de tokens, filtros e escopo, datas, descoberta compatível com o cadastro, fluxo OAuth completo com PKCE, rejeição de origem/CSRF, uso único, renovação, revogação e persistência após reinicialização. O frontend também compila com dependências fixadas e lockfile.
 
 ```bash
 python -m venv .venv

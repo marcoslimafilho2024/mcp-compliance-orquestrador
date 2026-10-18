@@ -184,7 +184,10 @@ def test_oauth_complete_flow_pkce_csrf_rotation_and_revocation(tmp_path):
     with TestClient(mcp.streamable_http_app(),base_url='https://monitor.example.invalid') as client:
         discovery=client.get('/.well-known/oauth-authorization-server').json()
         assert 'S256' in discovery['code_challenge_methods_supported']
-        reg=client.post('/register',json={'client_name':'ChatGPT Test','redirect_uris':['https://chatgpt.com/connector/oauth/test'],'token_endpoint_auth_method':'none','grant_types':['authorization_code','refresh_token'],'response_types':['code'],'scope':'monitor:read'})
+        assert discovery['token_endpoint_auth_methods_supported'] == ['none']
+        assert discovery['revocation_endpoint_auth_methods_supported'] == ['none']
+        method = discovery['token_endpoint_auth_methods_supported'][0]
+        reg=client.post('/register',json={'client_name':'ChatGPT Test','redirect_uris':['https://chatgpt.com/connector/oauth/test'],'token_endpoint_auth_method':method,'grant_types':['authorization_code','refresh_token'],'response_types':['code'],'scope':'monitor:read'})
         assert reg.status_code==201,reg.text
         client_id=reg.json()['client_id']
         verifier='v'*64
