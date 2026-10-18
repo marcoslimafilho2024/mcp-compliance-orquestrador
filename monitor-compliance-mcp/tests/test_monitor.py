@@ -167,3 +167,78 @@ def test_consent_serves_no_secrets(monkeypatch):
         assert 'test-secret-never-render' not in config.text+page.text
         assert "frame-ancestors 'none'" in page.headers['content-security-policy']
         assert config.headers['cache-control']=='no-store'
+
+class FakeIdentity:
+    subjects={'owner'}
+    async def verify(self,token):
+        return 'owner' if token=='valid-test-supabase-token' else None
+
+
+def test_oauth_complete_flow_pkce_csrf_rotation_and_revocation(tmp_path):
+    import base64, hashlib
+    from urllib.parse import urlsplit,parse_qs
+    from starlette.testclient import TestClient
+    from oauth_provider import Provider
+    provider=Provider(resource='https://monitor.example.invalid/mcp',db_path=str(tmp_path/'oauth.sqlite'),identity=FakeIdentity())
+    mcp=create_server(Backend(),provider=provider)
+    with TestClient(mcp.streamable_http_app(),base_url='https://monitor.example.invalid') as client:
+        discovery=client.get('/.well-known/oauth-authorization-server').json()
+        assert 'S256' in discovery['code_challenge_methods_supported']
+        reg=client.post('/register',json={'client_name':'ChatGPT Test','redirect_uris':['https://chatgpt.com/connector/oauth/test'],'token_endpoint_auth_method':'none','grant_types':['authorization_code','refresh_token'],'response_types':['code'],'scope':'monitor:read'})
+        assert reg.status_code==201,reg.text
+        client_id=reg.json()['client_id']
+        verifier='v'*64
+        challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
+        params={'client_id':client_id,'redirect_uri':'https://chatgpt.com/connector/oauth/test','response_type':'code','code_challenge':challenge,'code_challenge_method':'S256','scope':'monitor:read','state':'test-state','resource':provider.resource}
+        bad=client.get('/authorize',params=params|{'resource':'https://other.invalid/mcp'},follow_redirects=False)
+        assert bad.status_code in (302,400)
+        if bad.status_code==302: assert 'error=' in bad.headers['location']
+        auth=client.get('/authorize',params=params,follow_redirects=False)
+        assert auth.status_code==302,auth.text
+        location=auth.headers['location'];tx=parse_qs(urlsplit(location).query)['transaction'][0]
+        page=client.get(location)
+        assert 'Secure' in page.headers['set-cookie'] and 'HttpOnly' in page.headers['set-cookie']
+        details=client.get('/oauth/transaction',params={'transaction':tx}).json()
+        data={'transaction':tx,'decision':'approve','access_token':'valid-test-supabase-token'}
+        assert client.post('/oauth/decision',json=data).status_code==403
+        assert client.post('/oauth/decision',headers={'origin':'https://evil.invalid','x-csrf-token':details['csrf']},json=data).status_code==403
+        headers={'origin':provider.origin,'x-csrf-token':details['csrf']}
+        assert client.post('/oauth/decision',headers=headers,json=data|{'access_token':'wrong'}).status_code==400
+        grant=client.post('/oauth/decision',headers=headers,json=data)
+        assert grant.status_code==200,grant.text
+        query=parse_qs(urlsplit(grant.json()['redirect_url']).query)
+        assert query['state']==['test-state']
+        code=query['code'][0]
+        form={'grant_type':'authorization_code','code':code,'client_id':client_id,'redirect_uri':params['redirect_uri'],'resource':provider.resource,'code_verifier':'wrong'*20}
+        assert client.post('/token',data=form).status_code==400
+        tokens=client.post('/token',data=form|{'code_verifier':verifier})
+        assert tokens.status_code==200,tokens.text
+        tokens=tokens.json()
+        assert client.post('/token',data=form|{'code_verifier':verifier}).status_code==400
+        bearer={'Authorization':'Bearer '+tokens['access_token'],'Accept':'application/json, text/event-stream'}
+        assert client.post('/mcp',headers=bearer,json={'jsonrpc':'2.0','id':1,'method':'tools/list'}).status_code==200
+        refreshed=client.post('/token',data={'grant_type':'refresh_token','refresh_token':tokens['refresh_token'],'client_id':client_id,'resource':provider.resource})
+        assert refreshed.status_code==200,refreshed.text
+        assert run(provider.load_access_token(tokens['access_token'])) is None
+        assert client.post('/token',data={'grant_type':'refresh_token','refresh_token':tokens['refresh_token'],'client_id':client_id}).status_code==400
+        fresh=refreshed.json()
+        assert client.post('/revoke',data={'token':fresh['refresh_token'],'client_id':client_id}).status_code==200
+        assert run(provider.load_access_token(fresh['access_token'])) is None
+        # O banco não guarda tokens nem códigos de autorização em texto puro.
+        raw=(tmp_path/'oauth.sqlite').read_bytes()
+        assert code.encode() not in raw
+        assert fresh['access_token'].encode() not in raw
+
+
+def test_oauth_rejects_external_clients_and_survives_restart(tmp_path):
+    from oauth_provider import Provider
+    from mcp.shared.auth import OAuthClientInformationFull
+    from mcp.server.auth.provider import RegistrationError
+    p=Provider(resource='https://monitor.example.invalid/mcp',db_path=str(tmp_path/'state.sqlite'),identity=FakeIdentity())
+    client=OAuthClientInformationFull(client_id='test',redirect_uris=['https://evil.invalid/callback'],token_endpoint_auth_method='none')
+    with pytest.raises(RegistrationError):run(p.register_client(client))
+    from pydantic import AnyUrl
+    client.redirect_uris=[AnyUrl('https://chatgpt.com/connector/oauth/test')]
+    run(p.register_client(client))
+    again=Provider(resource=p.resource,db_path=p.path,identity=FakeIdentity())
+    assert run(again.get_client('test')).client_id=='test'

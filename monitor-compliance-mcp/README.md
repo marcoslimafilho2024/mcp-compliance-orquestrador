@@ -1,81 +1,77 @@
-# Monitor Compliance MCP — 0.2.0
+# Monitor Compliance MCP 0.3.0
 
-Servidor MCP de consulta para o WorkMonitor da Compliance, com quatro ferramentas:
+Serviço de consultas ao WorkMonitor, hospedado no Railway e autenticado com uma conta existente do Supabase. O módulo é independente do orquestrador na raiz do repositório.
 
-| Ferramenta | Função |
+## Ferramentas
+
+| Ferramenta | Resultado |
 | --- | --- |
-| `status_integracao` | Estado de configuração, sem expor credenciais ou testar login |
-| `listar_colaboradores` | Lista de pessoas no escopo selecionado da conta |
-| `consultar_produtividade` | Ranking, horas, ócio e departamentos por período |
-| `comparar_periodos` | Duas consultas com as bases preservadas |
+| status_integracao | Configuração do servidor, sem expor segredos |
+| listar_colaboradores | Identificação das pessoas no escopo selecionado |
+| consultar_produtividade | Horas, atividade, ócio e departamentos em um intervalo |
+| comparar_periodos | Duas bases com os mesmos critérios e escopo |
 
-## Estado da entrega
+## Autenticação
 
-Código criado e protocolo MCP testado, com 18 testes aprovados em 17/10/2026. A versão HTTP exige autenticação OAuth e não publica os dados anonimamente.
+O próprio MCP implementa o servidor OAuth 2.1 usando o SDK oficial `mcp` 1.30.0: descoberta, cadastro dinâmico de clientes públicos, authorization code com PKCE S256, renovação e revogação.
 
-O portal foi acessado nesta conversa pelo navegador, e os campos de datas, o botão Buscar e as 13 colunas reais do ranking foram conferidos. O adaptador usa essa interface, sem presumir endpoints de uma API privada.
+O usuário entra na tela de consentimento usando seu acesso existente ao projeto Supabase. O SDK Supabase no frontend envia a senha diretamente ao Supabase e mantém a sessão apenas na memória da página. O backend verifica assinatura ES256, emissor, audiência e usuário autorizado, além de validar o acesso em `/auth/v1/user`, antes de aceitar a decisão explícita de consentimento.
 
-**Ainda não publicado nem conectado ao ChatGPT.** O login e a coleta completos pelo adaptador Playwright em um servidor externo ainda precisam de validação. Os testes de protocolo usam dados fictícios e não comprovam acesso em produção. A imagem Docker e a emissão de HTTPS também precisam ser verificadas no ambiente escolhido.
+O MCP emite seus próprios tokens opacos, destinados exclusivamente ao recurso configurado em `MCP_RESOURCE_URL` e ao escopo `monitor:read`. Não aceita um JWT comum do Supabase como token MCP. Os códigos são de uso único, e os refresh tokens são rotacionados. Revogar um token invalida a respectiva família. Senhas e tokens Supabase não são persistidos pelo servidor. Tokens MCP e códigos são guardados somente como hashes no SQLite do volume privado.
 
-## Publicação para ChatGPT
+Essa integração não exige habilitar o OAuth Server nativo nem mudar Site URL, Authorization Path ou clientes de outras aplicações do projeto compartilhado no Supabase. Os modos anteriores de verificação externa permanecem no código para compatibilidade; a implantação usa `OAUTH_MODE=supabase-login`.
 
-Requer um servidor Linux com Docker Compose, um subdomínio sob controle da Compliance e um provedor OAuth compatível (por exemplo, o provedor corporativo, desde que suporte os requisitos abaixo). Nenhum serviço pago ou conta externa foi criado nesta entrega.
+Cadastro dinâmico aceita somente callbacks HTTPS em `chatgpt.com`. A tela exige decisão explícita, valida origem e CSRF e aceita somente o usuário listado em `OAUTH_ALLOWED_SUBJECTS`. Não há acesso anônimo aos dados WorkMonitor.
 
-1. Apontar o DNS do subdomínio para o servidor. Liberar 80/443 para o proxy HTTPS. Não expor a porta 8000 diretamente à Internet.
-2. Copiar `.env.example` para `.env` **somente no servidor**, com permissão restrita. Preencher os endereços reais e as credenciais pelo gerenciador de segredos. A senha fornecida no chat não está incluída no projeto.
-3. Configurar o provedor OAuth para authorization code com PKCE S256 e registrar o cliente ChatGPT por CIMD, DCR ou cliente previamente registrado, conforme suporte do provedor. A URL exata de callback deve vir da tela de configuração da conexão no ChatGPT; não inventá-la.
-4. Registrar o recurso/audiência igual a `MCP_RESOURCE_URL`, por exemplo o endereço HTTPS real terminado em `/mcp`. Criar o escopo `monitor:read`. O token JWT deve conter `iss`, `aud`, `exp`, `sub` e `scope`, assinado com RS256. O provedor precisa preservar o parâmetro OAuth `resource` e emiti-lo como audiência.
-5. Preencher `OAUTH_ALLOWED_SUBJECTS` com o `sub` do Marcos, obtido do provedor. Isso é obrigatório: não basta ter uma conta válida no provedor para acessar a conta compartilhada do WorkMonitor.
-6. Executar `docker compose up --build -d`. O Caddy obtém HTTPS automaticamente quando DNS e portas estiverem corretos. O serviço se recusa a iniciar sem a configuração OAuth necessária.
-7. Verificar `/health`, o desafio 401 em `/mcp` sem token e os metadados em `/.well-known/oauth-protected-resource/mcp`.
-8. Testar o fluxo OAuth com o provedor real e uma consulta de um único dia. Conferir os resultados diretamente no portal, inclusive escopo selecionado, datas e ranking completo.
-9. Adicionar o servidor MCP no ChatGPT usando a URL HTTPS real de `/mcp` e concluir o vínculo OAuth. A disponibilização da opção depende da conta e das configurações do ChatGPT.
+Tokens de acesso duram 1 hora e refresh tokens 7 dias. Remover um usuário da lista autorizada impede novos acessos. As sessões OAuth do MCP são independentes da sessão do painel administrativo Supabase; para encerrar o acesso do MCP, usar a revogação do MCP.
 
-A autenticação OAuth protege o acesso do ChatGPT ao MCP. As credenciais WorkMonitor são usadas separadamente pelo servidor para consultar a conta da Compliance; não são usadas para o login OAuth.
+Compatibilidade: o SDK MCP 1.30.0 declara `client_secret` opcional, mas sem default no formulário de revogação. A inicialização corrige esse default para `None`, preservando o autenticador do SDK. O teste cobre revogação de cliente público sem segredo.
 
-## Executar os testes
+## Railway
 
-Python 3.12:
+Usar este diretório como Root Directory, com o Dockerfile incluído. O build empacota o frontend Supabase localmente e instala Chromium. O processo de aplicação executa sem root; o entrypoint prepara a propriedade do volume antes de descartar privilégios.
+
+Montar um volume persistente em `/data`, em uma única instância. O banco OAuth não deve ser armazenado apenas no filesystem efêmero. O volume contém registros privados de autenticação; não deve ser exposto, incluído no Git ou servido pela aplicação.
+
+Preencher as variáveis de `.env.example` no gerenciador de variáveis do Railway. A chave Supabase utilizada é publicável. A senha WorkMonitor deve existir somente nas variáveis protegidas do serviço. Nenhum segredo de produção está incluído no código.
+
+Endpoints:
+
+| Caminho | Uso |
+| --- | --- |
+| /health | Disponibilidade do processo |
+| /mcp | MCP Streamable HTTP autenticado |
+| /.well-known/oauth-authorization-server | Descoberta OAuth |
+| /.well-known/oauth-protected-resource/mcp | Metadados do recurso |
+| /oauth/consent | Login e autorização iniciados pelo fluxo OAuth |
+
+No ChatGPT, adicionar um servidor MCP personalizado com a URL HTTPS real terminada em `/mcp`, autenticação OAuth e cadastro dinâmico. O cliente precisa enviar `token_endpoint_auth_method=none` e PKCE S256. As opções disponíveis dependem da configuração da conta ChatGPT. A conexão só termina após o usuário entrar e consentir na tela.
+
+## Validação
+
+20 testes aprovados na versão 0.3.0: protocolo MCP via HTTP e stdio, rejeição de tokens, filtros e escopo, datas, fluxo OAuth completo com PKCE, rejeição de origem/CSRF, uso único, renovação, revogação e persistência após reinicialização. O frontend também compila com dependências fixadas e lockfile.
 
 ```bash
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt pytest==9.1.1
+npm ci --ignore-scripts --prefix web
+npm run build --prefix web
 .venv/bin/python -m pytest -q
 ```
 
-Os testes não abrem um navegador nem usam credenciais reais. Cobrem validação de períodos, extração de colunas, filtros, comparação, negociação MCP por stdio e HTTP, descoberta OAuth e rejeição de tokens com emissor, audiência, expiração, usuário ou escopo incorretos.
+Os testes usam identidades e dados fictícios; não comprovam uma conexão ChatGPT real nem uma coleta WorkMonitor completa em produção. Esses dois testes de aceitação precisam ser feitos após a autorização real do usuário.
 
-Para uso local, `python server.py --stdio` oferece o transporte stdio sem OAuth. Este modo não cria um endpoint HTTP. Consultas reais ainda requerem as credenciais no ambiente e Chromium instalado (`python -m playwright install --with-deps chromium`).
+## Consulta ao portal
 
-## Limites operacionais
+O adaptador usa a interface autenticada em `web.workmonitor.com`, sem inventar endpoints de uma API privada. Os seletores e as 13 colunas do ranking foram inspecionados na interface em 17/10/2026. Alterar datas exige clicar Buscar antes de ler os resultados.
 
-O adaptador lança um navegador isolado por consulta e não grava cookies, vídeos, telas ou senhas em disco. Consultas simultâneas são serializadas por processo. Manter uma instância/worker inicialmente. No ambiente real, dimensionar memória e limitar requisições no proxy conforme a carga.
+O escopo é o selecionado na conta; não presumir que representa toda a empresa. O filtro de nome opera no ranking; indicadores de departamento continuam sendo do escopo completo. Valores e tempos auxiliares são preservados. Falhas de login, estrutura, cobertura ou carregamento interrompem a consulta. Não contornar desafios de segurança.
 
-O escopo consultado é o selecionado pela conta WorkMonitor; não há garantia automática de que corresponda a toda a empresa. O filtro opcional por colaborador é aplicado ao ranking retornado; os indicadores de departamento continuam sendo do escopo completo e isso é informado no resultado.
+Atividade, performance e score Gen.IA têm significados distintos. Ausência de captura não prova falta ou baixo desempenho. O serviço não altera jornada, cadastro ou classificação, não envia mensagens e não oferece capturas ao vivo.
 
-A interface pode mudar. Mudanças de colunas, autenticação, desafios de segurança, falta de cobertura ou carregamento incompleto causam erro e exigem revisão. Não contornar CAPTCHAs. Se o servidor não conseguir consultar o portal, preferir obter a documentação e a autorização da API oficial junto ao fornecedor. O projeto não usa `workmonitor.ai`: não foi validado que esse domínio pertença ao mesmo produto da conta informada.
+## Fontes
 
-Atividade, performance e score Gen.IA não são intercambiáveis. Tempos auxiliares e rótulos são preservados. Ausência de captura não prova falta ou desempenho inadequado. Não existem ferramentas de alteração, aprovação de ponto, captura ao vivo ou envio de mensagens.
-
-## Referências
-
-- [SDK oficial MCP para Python](https://github.com/modelcontextprotocol/python-sdk)
-- [Autenticação de servidores MCP para ChatGPT](https://developers.openai.com/plugins/build/auth)
-- [Autenticação do Playwright](https://playwright.dev/python/docs/auth)
-
-
-## Railway + projeto Supabase existente
-
-Esta versão inclui uma tela de consentimento em `/oauth/consent` com o SDK Supabase empacotado localmente. Não depende de scripts CDN na página de login. O frontend usa apenas a chave publicável; as credenciais WorkMonitor ficam nas variáveis protegidas do Railway. Não são incluídas no repositório.
-
-Para o modo Supabase, configurar `OAUTH_MODE=supabase`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, emissor e JWKS do projeto, `OAUTH_ALLOWED_SUBJECTS` e `OAUTH_ALLOWED_CLIENT_IDS`. A assinatura é ES256, conforme a chave do projeto selecionado.
-
-**A configuração genérica descrita acima se aplica ao modo OAuth estrito. No modo Supabase, não configurar o escopo monitor:read no provedor:** os escopos nativos anunciados são openid/email. O acesso às consultas é uma permissão interna do MCP, concedida somente quando usuário e cliente OAuth constam das listas administrativas. Sessões normais do Supabase e tokens de outros clientes são rejeitados. Sem cliente configurado, o MCP recusa todas as chamadas.
-
-Limitação documentada do provedor: Supabase não implementa indicadores de recurso RFC 8707; sua audiência é authenticated, compartilhada no projeto. A verificação adicional obrigatória de um cliente OAuth dedicado impede aceitar tokens de outros aplicativos. Isso não equivale a suporte nativo a audiência por recurso. Para exigências estritas de RFC 8707, usar o modo genérico com um provedor que emita a audiência do MCP.
-
-A UI de consentimento depende da configuração OAuth do Supabase. Antes de alterar Site URL ou Authorization Path de um projeto compartilhado, verificar as aplicações existentes. Não substituir configurações globais sem avaliar impacto. Preferir hospedar ou encaminhar a rota de consentimento no Site URL já utilizado pelo projeto. O conector Supabase atual não configura essas propriedades administrativas de Auth.
-
-Registrar um cliente OAuth exclusivo para este MCP, com a URL de callback exata fornecida pelo ChatGPT, e informar seu client_id em OAUTH_ALLOWED_CLIENT_IDS no Railway. O usuário deverá autenticar e consentir na interface. Nenhuma aprovação é automática.
-
-Referências: https://gofastmcp.com/integrations/supabase e https://supabase.com/docs/guides/auth/oauth-server/getting-started .
+- https://github.com/modelcontextprotocol/python-sdk
+- https://developers.openai.com/plugins/build/auth
+- https://supabase.com/docs/guides/auth
+- https://playwright.dev/python/docs/auth

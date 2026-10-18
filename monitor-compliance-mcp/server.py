@@ -4,37 +4,52 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from urllib.parse import urlsplit
 from mcp.server.fastmcp import FastMCP
-from mcp.server.auth.settings import AuthSettings
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from starlette.responses import JSONResponse, FileResponse
 from pathlib import Path
 from adapter import WorkMonitor, MonitorError, period
 from auth import Verifier, SCOPE
+from oauth_provider import Provider
 
 
-def create_server(backend=None, *, local=False, verifier=None):
+def create_server(backend=None, *, local=False, verifier=None, provider=None):
     backend = backend or WorkMonitor()
     settings = {}
+    facade = not local and (provider is not None or os.getenv('OAUTH_MODE') == 'supabase-login')
     if not local:
-        verifier = verifier or Verifier()
-        host = urlsplit(verifier.resource).netloc
-        settings = dict(token_verifier=verifier,
-                        auth=AuthSettings(issuer_url=verifier.issuer, resource_server_url=verifier.resource,
-                                          required_scopes=verifier.public_scopes if getattr(verifier,'supabase',False) else [SCOPE], validate_token_resource=True),
-                        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=True,
-                            allowed_hosts=[host, '127.0.0.1:*','localhost:*'],
-                            allowed_origins=['https://' + host]))
+        if facade:
+            # SDK 1.30: corrige somente o default do campo opcional; o
+            # autenticador do SDK continua validando o cliente antes da revogação.
+            from mcp.server.auth.handlers.revoke import RevocationRequest
+            RevocationRequest.model_fields['client_secret'].default = None
+            RevocationRequest.model_rebuild(force=True)
+            provider = provider or Provider()
+            host = urlsplit(provider.resource).netloc
+            settings = dict(auth_server_provider=provider,
+                 auth=AuthSettings(issuer_url=provider.origin, resource_server_url=provider.resource,
+                     required_scopes=[SCOPE], validate_token_resource=True,
+                     client_registration_options=ClientRegistrationOptions(enabled=True, valid_scopes=[SCOPE], default_scopes=[SCOPE]),
+                     revocation_options=RevocationOptions(enabled=True)))
+        else:
+            verifier = verifier or Verifier()
+            host = urlsplit(verifier.resource).netloc
+            settings = dict(token_verifier=verifier,
+                auth=AuthSettings(issuer_url=verifier.issuer, resource_server_url=verifier.resource,
+                     required_scopes=verifier.public_scopes if getattr(verifier,'supabase',False) else [SCOPE], validate_token_resource=True))
+        settings['transport_security']=TransportSecuritySettings(enable_dns_rebinding_protection=True,
+              allowed_hosts=[host,'127.0.0.1:*','localhost:*'],allowed_origins=['https://'+host])
     mcp = FastMCP('Monitor Compliance', host='0.0.0.0' if not local else '127.0.0.1',
                   port=int(os.environ.get('PORT','8000')), stateless_http=True, json_response=True,
                   instructions='Consultar apenas os dados solicitados. Preservar datas, escopo, nomes e unidades do portal. Não inferir faltas ou dedicação por telemetria.', **settings)
     annotations = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
-    metadata = {'securitySchemes':[{'type':'oauth2','scopes':verifier.public_scopes}]} if not local else {}
+    metadata = {'securitySchemes':[{'type':'oauth2','scopes':[SCOPE] if facade else verifier.public_scopes}]} if not local else {}
 
     @mcp.tool(annotations=annotations, meta=metadata, structured_output=True)
     async def status_integracao() -> dict[str, Any]:
         """Informar configuração do servidor, sem testar login nem retornar segredos."""
-        return {'servidor':'Monitor Compliance','versao':'0.2.0','transporte':'stdio' if local else 'streamable-http',
+        return {'servidor':'Monitor Compliance','versao':'0.3.0','transporte':'stdio' if local else 'streamable-http',
                 'modo':'consulta ao portal','credenciais_configuradas':bool(os.getenv('WORKMONITOR_USER') and os.getenv('WORKMONITOR_PASSWORD')),
                 'autenticacao_workmonitor':'nao_verificada_por_esta_ferramenta',
                 'monitoramento_continuo':False}
@@ -83,7 +98,12 @@ def create_server(backend=None, *, local=False, verifier=None):
 
     @mcp.custom_route('/oauth/consent', methods=['GET'])
     async def consent(request):
-        return FileResponse(Path(__file__).parent/'web'/'consent.html',headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
+        response=FileResponse(Path(__file__).parent/'web'/'consent.html',headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"})
+        if facade:
+            csrf=provider.begin(request.query_params.get('transaction',''))
+            if csrf:
+                response.set_cookie('monitor_oauth_csrf',csrf,secure=True,httponly=True,samesite='lax',max_age=600,path='/oauth')
+        return response
 
     @mcp.custom_route('/assets/consent.js', methods=['GET'])
     async def consent_js(request):
@@ -94,6 +114,36 @@ def create_server(backend=None, *, local=False, verifier=None):
         return JSONResponse({'url':os.environ.get('SUPABASE_URL',''),
              'publishableKey':os.environ.get('SUPABASE_PUBLISHABLE_KEY',''),
              'allowedUserId':os.environ.get('OAUTH_ALLOWED_SUBJECTS','').split(',')[0]},headers={'Cache-Control':'no-store'})
+    @mcp.custom_route('/oauth/transaction', methods=['GET'])
+    async def transaction(request):
+        if not facade:
+            return JSONResponse({'error':'not_supported'},status_code=400)
+        csrf=request.cookies.get('monitor_oauth_csrf','')
+        data=provider.details(request.query_params.get('transaction',''),csrf)
+        if not data:
+            return JSONResponse({'error':'expired_request'},status_code=400)
+        return JSONResponse(data|{'csrf':csrf},headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
+
+    @mcp.custom_route('/oauth/decision', methods=['POST'])
+    async def decision(request):
+        if not facade or request.headers.get('origin')!=provider.origin:
+            return JSONResponse({'error':'invalid_origin'},status_code=403)
+        cookie=request.cookies.get('monitor_oauth_csrf','')
+        if not cookie or request.headers.get('x-csrf-token')!=cookie:
+            return JSONResponse({'error':'invalid_request'},status_code=403)
+        try:
+            body=await request.body()
+            if len(body)>16384:
+                return JSONResponse({'error':'request_too_large'},status_code=413)
+            import json
+            data=json.loads(body)
+            redirect=await provider.decide(data['transaction'],cookie,data['decision'],data.get('access_token',''))
+            response=JSONResponse({'redirect_url':redirect},headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
+            response.delete_cookie('monitor_oauth_csrf',path='/oauth')
+            return response
+        except (ValueError,KeyError,TypeError):
+            return JSONResponse({'error':'Sessão ou solicitação inválida. Reinicie a conexão pelo ChatGPT.'},status_code=400)
+
     return mcp
 
 if __name__ == '__main__':
